@@ -18,7 +18,7 @@ function generatePlaceholderSvg(emoji: string, label: string): string {
     <text x="150" y="130" text-anchor="middle" font-size="80">${emoji}</text>
     <text x="150" y="200" text-anchor="middle" font-size="20" fill="#5a4d82" font-family="system-ui">${label}</text>
   </svg>`
-  return `data:image/svg+xml;base64,${btoa(svg)}`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
 export const defaultPuzzle: Puzzle = {
