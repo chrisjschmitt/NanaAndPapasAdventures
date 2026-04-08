@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Puzzle, PuzzleCell, GameProgress } from '../types'
+import JigsawPiece from './JigsawPiece'
 import PhotoGrid from './PhotoGrid'
 import Fireworks from './Fireworks'
 import './PuzzleBoard.css'
@@ -27,6 +28,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [hintVisible, setHintVisible] = useState(false)
   const [showFireworks, setShowFireworks] = useState(false)
   const [wrongPick, setWrongPick] = useState<string | null>(null)
+  const [pieceSize, setPieceSize] = useState(140)
 
   const allSolved = useMemo(
     () =>
@@ -38,6 +40,16 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   useEffect(() => {
     localStorage.setItem(`progress-${puzzle.id}`, JSON.stringify(progress))
   }, [progress, puzzle.id])
+
+  useEffect(() => {
+    function updateSize() {
+      const maxGridWidth = Math.min(window.innerWidth - 40, 540)
+      setPieceSize(Math.floor(maxGridWidth / 3.6))
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
 
   const handleCellClick = useCallback(
     (cell: PuzzleCell) => {
@@ -108,17 +120,22 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         </div>
       </header>
 
-      <div className="grid-3x3">
+      <div className="jigsaw-grid">
         {puzzle.cells.map((cell, index) => {
+          const row = Math.floor(index / 3)
+          const col = index % 3
           const solved = progress.solvedCellIds.includes(cell.id)
           const photo = getPhotoForCell(cell)
           return (
-            <button
+            <JigsawPiece
               key={cell.id}
-              className={`puzzle-piece ${solved ? 'solved' : ''}`}
+              row={row}
+              col={col}
+              size={pieceSize}
+              solved={solved}
               onClick={() => handleCellClick(cell)}
-              data-testid={`puzzle-cell-${index}`}
               disabled={solved}
+              testId={`puzzle-cell-${index}`}
             >
               {solved && photo ? (
                 <div className="solved-content">
@@ -131,7 +148,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
                   <span className="piece-icon">❓</span>
                 </div>
               )}
-            </button>
+            </JigsawPiece>
           )
         })}
       </div>

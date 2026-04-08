@@ -57,82 +57,80 @@
   font-weight: 700;
 }
 
-.grid-3x3 {
+/* Jigsaw grid: pieces overlap slightly due to tabs */
+.jigsaw-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.puzzle-piece {
-  aspect-ratio: 1;
-  border: 3px solid var(--border, #e5e4e7);
-  border-radius: 16px;
-  background: var(--social-bg, rgba(244, 243, 236, 0.5));
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(3, auto);
   justify-content: center;
-  padding: 8px;
-  overflow: hidden;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 24px;
+  padding: 20px;
 }
 
-.puzzle-piece:not(.solved):hover {
-  border-color: var(--accent, #aa3bff);
-  transform: scale(1.03);
-  box-shadow: 0 4px 15px rgba(170, 59, 255, 0.2);
+.jigsaw-piece {
+  transition: filter 0.2s ease, transform 0.2s ease;
+  z-index: 1;
 }
 
-.puzzle-piece.solved {
-  border-color: #06d6a0;
-  background: rgba(6, 214, 160, 0.08);
-  cursor: default;
+.jigsaw-piece:not(.solved):hover {
+  filter: brightness(1.1) drop-shadow(0 4px 12px rgba(170, 59, 255, 0.35));
+  transform: scale(1.06);
+  z-index: 10;
+}
+
+.jigsaw-piece.solved {
+  filter: drop-shadow(0 2px 6px rgba(6, 214, 160, 0.3));
 }
 
 .unsolved-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
 }
 
 .piece-number {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--accent, #aa3bff);
+  text-shadow: 0 1px 2px rgba(170, 59, 255, 0.2);
 }
 
 .piece-icon {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
 }
 
 .solved-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
   width: 100%;
   height: 100%;
 }
 
 .solved-content img {
-  width: 100%;
-  flex: 1;
+  width: 80%;
+  height: 60%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .solved-label {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: var(--text-h, #08060d);
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+  max-width: 90%;
 }
 
 .celebration-banner {

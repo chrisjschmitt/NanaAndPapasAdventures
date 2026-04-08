@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
+import { playFireworksSound } from '../lib/fireworksSound'
 
 interface Particle {
   x: number
@@ -70,6 +71,8 @@ export default function Fireworks({
     canvas.height = window.innerHeight
     particles.current = []
     startTime.current = Date.now()
+
+    playFireworksSound(duration)
 
     const launchBursts = () => {
       const w = canvas.width
