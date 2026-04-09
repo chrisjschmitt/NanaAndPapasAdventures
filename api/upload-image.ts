@@ -1,21 +1,29 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyRequest, unauthorizedResponse } from './lib/auth'
-import { uploadImage } from './lib/blob-storage'
+import { put } from '@vercel/blob'
 
 export const config = {
   api: { bodyParser: false },
 }
 
+function verifyToken(req: VercelRequest): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD
+  if (!adminPassword) return false
+  const token = req.headers['x-admin-token']
+  if (!token || typeof token !== 'string') return false
+  try {
+    const decoded = Buffer.from(token, 'base64').toString()
+    return decoded === `nana:${adminPassword}`
+  } catch { return false }
+}
+
+const MIME_MAP: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+  gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif',
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-
-  const asRequest = new Request('http://localhost', {
-    headers: req.headers as unknown as HeadersInit,
-  })
-  if (!verifyRequest(asRequest)) {
-    const u = unauthorizedResponse()
-    return res.status(u.status).json(await u.json())
-  }
+  if (!verifyToken(req)) return res.status(401).json({ error: 'Unauthorized' })
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN not set.' })
@@ -42,12 +50,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'No file provided' })
     }
 
-    const file = new File([filePart.data], filePart.filename || 'upload.jpg', {
-      type: filePart.contentType || 'application/octet-stream',
-    })
+    const fileName = filePart.filename || 'upload.jpg'
+    const ext = (fileName.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const key = `adventures/images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
-    const url = await uploadImage(file)
-    return res.json({ url })
+    let ct = filePart.contentType || ''
+    if (!ct || ct === 'application/octet-stream') {
+      ct = MIME_MAP[ext] || 'application/octet-stream'
+    }
+
+    const blob = await put(key, filePart.data, { access: 'public', contentType: ct })
+    return res.json({ url: blob.url })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return res.status(500).json({ error: message })
@@ -63,11 +76,10 @@ interface MultipartPart {
 
 function parseMultipart(body: Buffer, boundary: string): MultipartPart[] {
   const parts: MultipartPart[] = []
-  const boundaryBuf = Buffer.from(`--${boundary}`)
+  const boundaryStr = `--${boundary}`
   const bodyStr = body.toString('binary')
-  const boundaryStr = boundaryBuf.toString('binary')
-
   const segments = bodyStr.split(boundaryStr).slice(1)
+
   for (const segment of segments) {
     if (segment.startsWith('--')) break
     const headerEnd = segment.indexOf('\r\n\r\n')
@@ -75,9 +87,7 @@ function parseMultipart(body: Buffer, boundary: string): MultipartPart[] {
 
     const headerSection = segment.substring(0, headerEnd)
     const dataSection = segment.substring(headerEnd + 4)
-    const trimmedData = dataSection.endsWith('\r\n')
-      ? dataSection.slice(0, -2)
-      : dataSection
+    const trimmedData = dataSection.endsWith('\r\n') ? dataSection.slice(0, -2) : dataSection
 
     const nameMatch = headerSection.match(/name="([^"]+)"/)
     const filenameMatch = headerSection.match(/filename="([^"]+)"/)

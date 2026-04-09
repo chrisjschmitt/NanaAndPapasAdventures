@@ -1,52 +1,74 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyRequest, unauthorizedResponse, jsonResponse } from './lib/auth'
-import { getPuzzlesManifest, savePuzzlesManifest } from './lib/blob-storage'
+import { put, list } from '@vercel/blob'
+
+const PUZZLES_MANIFEST = 'adventures/puzzles.json'
+
+function verifyToken(req: VercelRequest): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD
+  if (!adminPassword) return false
+  const token = req.headers['x-admin-token']
+  if (!token || typeof token !== 'string') return false
+  try {
+    const decoded = Buffer.from(token, 'base64').toString()
+    return decoded === `nana:${adminPassword}`
+  } catch { return false }
+}
+
+async function getManifest(): Promise<unknown[]> {
+  try {
+    const { blobs } = await list({ prefix: PUZZLES_MANIFEST })
+    if (blobs.length === 0) return []
+    const url = `${blobs[0].url}?t=${Date.now()}`
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return []
+    return await res.json()
+  } catch { return [] }
+}
+
+async function saveManifest(data: unknown[]): Promise<void> {
+  await put(PUZZLES_MANIFEST, JSON.stringify(data, null, 2), {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  })
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+
   if (req.method === 'GET') {
-    const puzzles = await getPuzzlesManifest()
-    const r = jsonResponse(puzzles)
-    res.status(r.status)
-    r.headers.forEach((v, k) => res.setHeader(k, v))
-    return res.json(await r.json())
+    const puzzles = await getManifest()
+    return res.json(puzzles)
   }
 
-  const asRequest = new Request('http://localhost', {
-    headers: req.headers as unknown as HeadersInit,
-  })
-  if (!verifyRequest(asRequest)) {
-    const u = unauthorizedResponse()
-    return res.status(u.status).json(await u.json())
+  if (!verifyToken(req)) return res.status(401).json({ error: 'Unauthorized' })
+
+  let body = req.body
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body) } catch { return res.status(400).json({ error: 'Invalid JSON' }) }
   }
 
   if (req.method === 'POST') {
-    const puzzle = req.body
-    if (!puzzle || !puzzle.id) {
-      return res.status(400).json({ error: 'Puzzle data required' })
-    }
-    const puzzles = await getPuzzlesManifest()
-    puzzles.push(puzzle)
-    await savePuzzlesManifest(puzzles)
-    return res.json(puzzle)
+    if (!body?.id) return res.status(400).json({ error: 'Puzzle data required' })
+    const puzzles = await getManifest()
+    puzzles.push(body)
+    await saveManifest(puzzles)
+    return res.json(body)
   }
 
   if (req.method === 'PUT') {
-    const update = req.body
-    if (!update || !update.id) {
-      return res.status(400).json({ error: 'Puzzle id required' })
-    }
-    const puzzles = await getPuzzlesManifest()
-    const updated = puzzles.map((p) => (p.id === update.id ? { ...p, ...update } : p))
-    await savePuzzlesManifest(updated)
+    if (!body?.id) return res.status(400).json({ error: 'Puzzle id required' })
+    const puzzles = await getManifest() as { id: string }[]
+    const updated = puzzles.map((p) => (p.id === body.id ? { ...p, ...body } : p))
+    await saveManifest(updated)
     return res.json({ ok: true })
   }
 
   if (req.method === 'DELETE') {
-    const { id } = req.body
-    if (!id) return res.status(400).json({ error: 'Puzzle id required' })
-    const puzzles = await getPuzzlesManifest()
-    const updated = puzzles.filter((p) => p.id !== id)
-    await savePuzzlesManifest(updated)
+    if (!body?.id) return res.status(400).json({ error: 'Puzzle id required' })
+    const puzzles = await getManifest() as { id: string }[]
+    await saveManifest(puzzles.filter((p) => p.id !== body.id))
     return res.json({ ok: true })
   }
 
