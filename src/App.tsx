@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Puzzle } from './types'
-import { getPuzzles, savePuzzle, getPuzzle } from './lib/storage'
 import { defaultPuzzle } from './data/defaultPuzzle'
 import PuzzleSelector from './components/PuzzleSelector'
 import PuzzleBoard from './components/PuzzleBoard'
@@ -9,6 +8,19 @@ import './App.css'
 
 type View = 'selector' | 'game' | 'admin'
 
+async function loadPuzzlesFromApi(): Promise<Puzzle[]> {
+  try {
+    const res = await fetch('/api/puzzles', { cache: 'no-store' })
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data) && data.length > 0) return data
+    }
+  } catch {
+    // API not available (local dev without Vercel)
+  }
+  return [defaultPuzzle]
+}
+
 function App() {
   const [view, setView] = useState<View>('selector')
   const [puzzles, setPuzzles] = useState<Puzzle[]>([])
@@ -16,29 +28,24 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   const loadPuzzles = useCallback(async () => {
-    try {
-      let stored = await getPuzzles()
-
-      if (stored.length === 0) {
-        await savePuzzle(defaultPuzzle)
-        stored = [defaultPuzzle]
-      }
-
-      setPuzzles(stored)
-    } catch {
-      setPuzzles([defaultPuzzle])
-    } finally {
-      setLoading(false)
-    }
+    const data = await loadPuzzlesFromApi()
+    setPuzzles(data)
+    setLoading(false)
   }, [])
 
   useEffect(() => {
-    loadPuzzles()
-  }, [loadPuzzles])
+    let cancelled = false
+    loadPuzzlesFromApi().then((data) => {
+      if (!cancelled) {
+        setPuzzles(data)
+        setLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
 
-  const handleSelectPuzzle = useCallback(async (puzzle: Puzzle) => {
-    const fresh = await getPuzzle(puzzle.id)
-    setActivePuzzle(fresh ?? puzzle)
+  const handleSelectPuzzle = useCallback((puzzle: Puzzle) => {
+    setActivePuzzle(puzzle)
     setView('game')
   }, [])
 
