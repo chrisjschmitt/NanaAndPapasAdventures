@@ -1,46 +1,68 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyRequest, unauthorizedResponse, jsonResponse } from './lib/auth'
-import {
-  getPhotosManifest,
-  savePhotosManifest,
-  deleteImage,
-} from './lib/blob-storage'
+import { put, list, del } from '@vercel/blob'
+
+const PHOTOS_MANIFEST = 'adventures/photos.json'
+
+function verifyToken(req: VercelRequest): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD
+  if (!adminPassword) return false
+  const token = req.headers['x-admin-token']
+  if (!token || typeof token !== 'string') return false
+  try {
+    const decoded = Buffer.from(token, 'base64').toString()
+    return decoded === `nana:${adminPassword}`
+  } catch { return false }
+}
+
+async function getManifest(): Promise<unknown[]> {
+  try {
+    const { blobs } = await list({ prefix: PHOTOS_MANIFEST })
+    if (blobs.length === 0) return []
+    const url = `${blobs[0].url}?t=${Date.now()}`
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return []
+    return await res.json()
+  } catch { return [] }
+}
+
+async function saveManifest(data: unknown[]): Promise<void> {
+  await put(PHOTOS_MANIFEST, JSON.stringify(data, null, 2), {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  })
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+
   if (req.method === 'GET') {
-    const photos = await getPhotosManifest()
-    const r = jsonResponse(photos)
-    res.status(r.status)
-    r.headers.forEach((v, k) => res.setHeader(k, v))
-    return res.json(await r.json())
+    const photos = await getManifest()
+    return res.json(photos)
   }
 
-  const asRequest = new Request('http://localhost', {
-    headers: req.headers as unknown as HeadersInit,
-  })
-  if (!verifyRequest(asRequest)) {
-    const u = unauthorizedResponse()
-    return res.status(u.status).json(await u.json())
+  if (!verifyToken(req)) return res.status(401).json({ error: 'Unauthorized' })
+
+  let body = req.body
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body) } catch { return res.status(400).json({ error: 'Invalid JSON' }) }
   }
 
   if (req.method === 'PUT') {
-    const photos = req.body
-    if (!Array.isArray(photos)) {
-      return res.status(400).json({ error: 'Expected array of photos' })
-    }
-    await savePhotosManifest(photos)
+    if (!Array.isArray(body)) return res.status(400).json({ error: 'Expected array' })
+    await saveManifest(body)
     return res.json({ ok: true })
   }
 
   if (req.method === 'DELETE') {
-    const { id, url } = req.body
+    const { id, url } = body || {}
     if (url) {
-      await deleteImage(url)
+      try { await del(url) } catch { /* may be already deleted */ }
     }
     if (id) {
-      const photos = await getPhotosManifest()
-      const updated = photos.filter((p) => p.id !== id)
-      await savePhotosManifest(updated)
+      const photos = await getManifest() as { id: string }[]
+      await saveManifest(photos.filter((p) => p.id !== id))
     }
     return res.json({ ok: true })
   }
