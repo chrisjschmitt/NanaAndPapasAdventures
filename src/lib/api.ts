@@ -1,4 +1,4 @@
-import type { PhotoMeta, Puzzle } from '../types'
+import type { Puzzle } from '../types'
 
 function getToken(): string | null {
   return sessionStorage.getItem('admin_token')
@@ -31,22 +31,7 @@ export function isLoggedIn(): boolean {
   return !!getToken()
 }
 
-// --- Photos ---
-
-export async function fetchPhotos(): Promise<PhotoMeta[]> {
-  const res = await fetch('/api/photos', { cache: 'no-store' })
-  if (!res.ok) throw new Error('Failed to load photos')
-  return res.json()
-}
-
-export async function savePhotosManifest(photos: PhotoMeta[]): Promise<void> {
-  const res = await fetch('/api/photos', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(photos),
-  })
-  if (!res.ok) throw new Error('Failed to save photos')
-}
+// --- Images ---
 
 export async function uploadImage(file: File): Promise<{ url: string; pathname: string }> {
   const fd = new FormData()
@@ -59,15 +44,6 @@ export async function uploadImage(file: File): Promise<{ url: string; pathname: 
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Upload failed')
   return { url: data.url, pathname: data.pathname }
-}
-
-export async function deletePhoto(id: string, pathname: string): Promise<void> {
-  const res = await fetch('/api/photos', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ id, pathname }),
-  })
-  if (!res.ok) throw new Error('Failed to delete photo')
 }
 
 // --- Puzzles ---
