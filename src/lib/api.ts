@@ -48,7 +48,7 @@ export async function savePhotosManifest(photos: PhotoMeta[]): Promise<void> {
   if (!res.ok) throw new Error('Failed to save photos')
 }
 
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(file: File): Promise<{ url: string; pathname: string }> {
   const fd = new FormData()
   fd.append('file', file)
   const res = await fetch('/api/upload-image', {
@@ -58,14 +58,14 @@ export async function uploadImage(file: File): Promise<string> {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Upload failed')
-  return data.url
+  return { url: data.url, pathname: data.pathname }
 }
 
-export async function deletePhoto(id: string, url: string): Promise<void> {
+export async function deletePhoto(id: string, pathname: string): Promise<void> {
   const res = await fetch('/api/photos', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ id, url }),
+    body: JSON.stringify({ id, pathname }),
   })
   if (!res.ok) throw new Error('Failed to delete photo')
 }

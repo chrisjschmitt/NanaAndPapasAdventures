@@ -148,10 +148,11 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
     try {
       for (let i = 0; i < pendingFiles.length; i++) {
         setUploadProgress(`Uploading ${i + 1} of ${pendingFiles.length}...`)
-        const url = await uploadImage(pendingFiles[i].file)
+        const { url, pathname } = await uploadImage(pendingFiles[i].file)
         newPhotos.push({
           id: generateId(),
           url,
+          pathname,
           label: pendingFiles[i].label,
           description: pendingFiles[i].description,
         })
@@ -176,7 +177,7 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
     if (!confirm(`Delete "${photo.label}"?`)) return
     setDeletingPhoto(photo.id)
     try {
-      await deletePhoto(photo.id, photo.url)
+      await deletePhoto(photo.id, photo.pathname)
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id))
       toast('success', 'Photo deleted.')
     } catch {

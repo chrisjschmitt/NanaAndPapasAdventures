@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { put, list, del } from '@vercel/blob'
+import { put, list, del, get } from '@vercel/blob'
 
 const PHOTOS_MANIFEST = 'adventures/photos.json'
 
@@ -18,16 +18,16 @@ async function getManifest(): Promise<unknown[]> {
   try {
     const { blobs } = await list({ prefix: PHOTOS_MANIFEST })
     if (blobs.length === 0) return []
-    const url = `${blobs[0].url}?t=${Date.now()}`
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) return []
-    return await res.json()
+    const result = await get(blobs[0].url, { access: 'private' })
+    if (!result || result.statusCode !== 200) return []
+    const text = await new Response(result.stream).text()
+    return JSON.parse(text)
   } catch { return [] }
 }
 
 async function saveManifest(data: unknown[]): Promise<void> {
   await put(PHOTOS_MANIFEST, JSON.stringify(data, null, 2), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -56,9 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'DELETE') {
-    const { id, url } = body || {}
-    if (url) {
-      try { await del(url) } catch { /* may be already deleted */ }
+    const { id, pathname } = body || {}
+    if (pathname) {
+      try { await del(pathname) } catch { /* may be already deleted */ }
     }
     if (id) {
       const photos = await getManifest() as { id: string }[]
