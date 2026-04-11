@@ -148,6 +148,28 @@
   max-width: 90%;
 }
 
+.replay-bar {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.replay-btn {
+  background: var(--accent-bg, rgba(170, 59, 255, 0.1));
+  border: 1px solid var(--accent-border, rgba(170, 59, 255, 0.3));
+  color: var(--accent, #aa3bff);
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.replay-btn:hover {
+  background: var(--accent, #aa3bff);
+  color: white;
+}
+
 .celebration-banner {
   text-align: center;
   background: linear-gradient(135deg, rgba(170, 59, 255, 0.1), rgba(6, 214, 160, 0.1));

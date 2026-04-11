@@ -31,22 +31,19 @@ export default function PhotoGrid({
               disabled={isSolved}
               data-testid={`photo-${photo.id}`}
             >
-              <img src={photo.url} alt={photo.label} />
-              <div className="photo-cell-footer">
-                <span className="photo-label">{photo.label}</span>
-                {!isSolved && (
-                  <button
-                    className="zoom-btn"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setZoomedPhoto(photo)
-                    }}
-                    title="Zoom in"
-                  >
-                    🔍
-                  </button>
-                )}
-              </div>
+              <img src={photo.url} alt="" />
+              {!isSolved && (
+                <button
+                  className="zoom-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setZoomedPhoto(photo)
+                  }}
+                  title="Zoom in"
+                >
+                  🔍
+                </button>
+              )}
               {isSolved && <div className="used-overlay">✅</div>}
             </button>
           )
@@ -60,8 +57,7 @@ export default function PhotoGrid({
           data-testid="photo-zoom"
         >
           <div className="photo-zoom-content" onClick={(e) => e.stopPropagation()}>
-            <img src={zoomedPhoto.url} alt={zoomedPhoto.label} />
-            <p className="photo-zoom-label">{zoomedPhoto.label}</p>
+            <img src={zoomedPhoto.url} alt="" />
             <button className="photo-zoom-close" onClick={() => setZoomedPhoto(null)}>
               ✕ Close
             </button>
