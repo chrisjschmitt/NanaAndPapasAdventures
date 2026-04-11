@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { put, list } from '@vercel/blob'
+import { put, list, get } from '@vercel/blob'
 
 const PUZZLES_MANIFEST = 'adventures/puzzles.json'
 
@@ -18,16 +18,16 @@ async function getManifest(): Promise<unknown[]> {
   try {
     const { blobs } = await list({ prefix: PUZZLES_MANIFEST })
     if (blobs.length === 0) return []
-    const url = `${blobs[0].url}?t=${Date.now()}`
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) return []
-    return await res.json()
+    const result = await get(blobs[0].url, { access: 'private' })
+    if (!result || result.statusCode !== 200) return []
+    const text = await new Response(result.stream).text()
+    return JSON.parse(text)
   } catch { return [] }
 }
 
 async function saveManifest(data: unknown[]): Promise<void> {
   await put(PUZZLES_MANIFEST, JSON.stringify(data, null, 2), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
     allowOverwrite: true,

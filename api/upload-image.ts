@@ -59,8 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ct = MIME_MAP[ext] || 'application/octet-stream'
     }
 
-    const blob = await put(key, filePart.data, { access: 'public', contentType: ct })
-    return res.json({ url: blob.url })
+    const blob = await put(key, filePart.data, { access: 'private', contentType: ct })
+    return res.json({ url: `/api/blob?pathname=${encodeURIComponent(blob.pathname)}`, pathname: blob.pathname })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return res.status(500).json({ error: message })
