@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import type { Puzzle, PuzzleCell, GameProgress } from '../types'
+import type { Puzzle, PuzzleCell, Photo, GameProgress } from '../types'
 import JigsawPiece from './JigsawPiece'
 import PhotoGrid from './PhotoGrid'
 import Fireworks from './Fireworks'
@@ -20,6 +20,22 @@ function loadProgress(puzzleId: string): GameProgress {
   return { puzzleId, solvedCellIds: [] }
 }
 
+function isCellComplete(cell: PuzzleCell, photos: Photo[]): boolean {
+  if (!cell.clue.trim() || !cell.hint.trim()) return false
+  const photo = photos.find((p) => p.id === cell.correctPhotoId)
+  return !!photo?.url
+}
+
+function generatePlaceholder(index: number): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+    <rect width="200" height="200" fill="#e5e4e7" rx="12"/>
+    <text x="100" y="90" text-anchor="middle" font-size="40" fill="#b0adb5">🚧</text>
+    <text x="100" y="130" text-anchor="middle" font-size="14" fill="#9a979f" font-family="system-ui">Coming Soon</text>
+    <text x="100" y="155" text-anchor="middle" font-size="12" fill="#b0adb5" font-family="system-ui">Cell ${index + 1}</text>
+  </svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
 export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [progress, setProgress] = useState<GameProgress>(() =>
     loadProgress(puzzle.id)
@@ -30,11 +46,16 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [wrongPick, setWrongPick] = useState<string | null>(null)
   const [pieceSize, setPieceSize] = useState(140)
 
+  const completeCells = useMemo(
+    () => puzzle.cells.filter((c) => isCellComplete(c, puzzle.photos)),
+    [puzzle.cells, puzzle.photos]
+  )
+
   const allSolved = useMemo(
     () =>
-      puzzle.cells.length > 0 &&
-      progress.solvedCellIds.length === puzzle.cells.length,
-    [progress.solvedCellIds.length, puzzle.cells.length]
+      completeCells.length > 0 &&
+      completeCells.every((c) => progress.solvedCellIds.includes(c.id)),
+    [completeCells, progress.solvedCellIds]
   )
 
   useEffect(() => {
@@ -54,11 +75,12 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const handleCellClick = useCallback(
     (cell: PuzzleCell) => {
       if (progress.solvedCellIds.includes(cell.id)) return
+      if (!isCellComplete(cell, puzzle.photos)) return
       setSelectedCell(cell)
       setHintVisible(false)
       setWrongPick(null)
     },
-    [progress.solvedCellIds]
+    [progress.solvedCellIds, puzzle.photos]
   )
 
   const handlePhotoSelect = useCallback(
@@ -97,6 +119,8 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const getPhotoForCell = (cell: PuzzleCell) =>
     puzzle.photos.find((p) => p.id === cell.correctPhotoId)
 
+  const playablePhotos = puzzle.photos.filter((p) => p.url)
+
   return (
     <div className="puzzle-board">
       <header className="puzzle-header">
@@ -115,7 +139,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         </div>
         <div className="puzzle-header-right">
           <span className="score-badge">
-            {progress.solvedCellIds.length}/{puzzle.cells.length} ⭐
+            {progress.solvedCellIds.length}/{completeCells.length} ⭐
           </span>
         </div>
       </header>
@@ -126,6 +150,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
           const col = index % 3
           const solved = progress.solvedCellIds.includes(cell.id)
           const photo = getPhotoForCell(cell)
+          const complete = isCellComplete(cell, puzzle.photos)
           return (
             <JigsawPiece
               key={cell.id}
@@ -134,13 +159,17 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
               size={pieceSize}
               solved={solved}
               onClick={() => handleCellClick(cell)}
-              disabled={solved}
+              disabled={solved || !complete}
               testId={`puzzle-cell-${index}`}
             >
               {solved && photo ? (
                 <div className="solved-content">
                   <img src={photo.url} alt={photo.label} />
                   <span className="solved-label">{photo.label}</span>
+                </div>
+              ) : !complete ? (
+                <div className="placeholder-content">
+                  <img src={generatePlaceholder(index)} alt="Coming soon" />
                 </div>
               ) : (
                 <div className="unsolved-content">
@@ -153,7 +182,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         })}
       </div>
 
-      {allSolved && (
+      {allSolved && completeCells.length > 0 && (
         <div className="celebration-banner" data-testid="celebration">
           <h2>🎉 You solved the whole puzzle! 🎉</h2>
           <p>Amazing job, adventurer!</p>
@@ -183,7 +212,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
               )}
             </div>
             <PhotoGrid
-              photos={puzzle.photos}
+              photos={playablePhotos}
               onSelect={handlePhotoSelect}
               wrongPick={wrongPick}
               solvedPhotoIds={progress.solvedCellIds
