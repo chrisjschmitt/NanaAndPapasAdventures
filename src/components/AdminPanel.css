@@ -165,6 +165,11 @@
   border-radius: 12px;
   padding: 16px;
   background: white;
+  transition: border-color 0.2s;
+}
+.cell-editor.cell-complete {
+  border-color: #06d6a0;
+  background: rgba(6, 214, 160, 0.03);
 }
 
 .cell-editor-header {

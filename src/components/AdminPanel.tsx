@@ -314,26 +314,26 @@ function PuzzleEditor({
 
   async function handleSave() {
     if (!name.trim()) { toast('error', 'Puzzle name is required.'); return }
-    if (drafts.length !== 9) { toast('error', 'A puzzle needs exactly 9 cells.'); return }
 
-    for (let i = 0; i < drafts.length; i++) {
-      const d = drafts[i]
-      if (!d.clue.trim()) { toast('error', `Cell ${i + 1} needs a clue.`); return }
-      if (!d.hint.trim()) { toast('error', `Cell ${i + 1} needs a hint.`); return }
-      if (!d.photo && !d.pendingFile) { toast('error', `Cell ${i + 1} needs a photo.`); return }
-    }
+    const filesToUpload = drafts.filter((d) => d.pendingFile).length
+    const completeCount = drafts.filter((d) =>
+      (d.photo?.url || d.pendingFile) && d.clue.trim() && d.hint.trim()
+    ).length
 
     setSaving(true)
     try {
       const photos: Photo[] = []
       const cells: PuzzleCell[] = []
+      let uploadIdx = 0
 
       for (let i = 0; i < drafts.length; i++) {
         const d = drafts[i]
-        let photo = d.photo!
+        const photoId = d.photo?.id || generateId()
+        let photo: Photo = d.photo || { id: photoId, url: '', pathname: '', label: '' }
 
         if (d.pendingFile) {
-          setUploadProgress(`Uploading photo ${i + 1} of 9...`)
+          uploadIdx++
+          setUploadProgress(`Uploading photo ${uploadIdx} of ${filesToUpload}...`)
           const { url, pathname } = await uploadImage(d.pendingFile)
           photo = { ...photo, url, pathname }
         }
@@ -351,6 +351,10 @@ function PuzzleEditor({
         pendingFile: null,
         pendingPreview: d.pendingPreview ? (URL.revokeObjectURL(d.pendingPreview), '') : '',
       })))
+
+      if (completeCount < drafts.length) {
+        toast('success', `Saved! ${completeCount}/${drafts.length} cells complete.`)
+      }
     } catch (err) {
       toast('error', err instanceof Error ? err.message : 'Save failed.')
     } finally {
@@ -386,14 +390,17 @@ function PuzzleEditor({
           )}
         </div>
         <p className="editor-hint">
-          Each cell needs a photo, a clue, and a hint. Upload a photo for each cell directly.
+          Each cell needs a photo, a clue, and a hint. You can save at any time and come back to finish later.
         </p>
 
         <div className="cells-list">
-          {drafts.map((draft, index) => (
-            <div key={draft.id} className="cell-editor">
+          {drafts.map((draft, index) => {
+            const hasPhoto = !!(draft.pendingFile || draft.photo?.url)
+            const isComplete = hasPhoto && draft.clue.trim() && draft.hint.trim()
+            return (
+            <div key={draft.id} className={`cell-editor ${isComplete ? 'cell-complete' : ''}`}>
               <div className="cell-editor-header">
-                <strong>Cell {index + 1}</strong>
+                <strong>{isComplete ? '✅' : '⬜'} Cell {index + 1}</strong>
                 <div className="cell-header-actions">
                   <button
                     onClick={() => moveCell(index, -1)}
@@ -464,7 +471,7 @@ function PuzzleEditor({
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 

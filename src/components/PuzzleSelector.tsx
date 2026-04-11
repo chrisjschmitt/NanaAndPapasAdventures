@@ -20,20 +20,28 @@ export default function PuzzleSelector({
       </header>
 
       <div className="puzzle-list">
-        {puzzles.map((puzzle) => (
-          <button
-            key={puzzle.id}
-            className="puzzle-card"
-            onClick={() => onSelect(puzzle)}
-            data-testid={`puzzle-${puzzle.id}`}
-          >
-            <span className="puzzle-card-icon">🧩</span>
-            <span className="puzzle-card-name">{puzzle.name}</span>
-            <span className="puzzle-card-count">
-              {puzzle.cells.length} pieces
-            </span>
-          </button>
-        ))}
+        {puzzles.map((puzzle) => {
+          const complete = puzzle.cells.filter((c) => {
+            const photo = puzzle.photos.find((p) => p.id === c.correctPhotoId)
+            return c.clue.trim() && c.hint.trim() && photo?.url
+          }).length
+          return (
+            <button
+              key={puzzle.id}
+              className="puzzle-card"
+              onClick={() => onSelect(puzzle)}
+              data-testid={`puzzle-${puzzle.id}`}
+            >
+              <span className="puzzle-card-icon">🧩</span>
+              <span className="puzzle-card-name">{puzzle.name || 'Untitled'}</span>
+              <span className="puzzle-card-count">
+                {complete === puzzle.cells.length
+                  ? `${puzzle.cells.length} pieces`
+                  : `${complete}/${puzzle.cells.length} ready`}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       <button className="admin-link" onClick={onAdmin} data-testid="admin-btn">
