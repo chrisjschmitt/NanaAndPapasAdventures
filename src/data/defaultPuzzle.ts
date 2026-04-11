@@ -83,6 +83,7 @@ export const defaultPuzzle: Puzzle = {
   photos: CRUISE_PHOTOS.map((p) => ({
     id: p.id,
     url: generatePlaceholderSvg(p.emoji, p.label),
+    pathname: '',
     label: p.label,
   })),
   createdAt: new Date().toISOString(),

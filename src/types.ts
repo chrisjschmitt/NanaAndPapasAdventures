@@ -1,14 +1,7 @@
-export interface PhotoMeta {
-  id: string
-  url: string
-  pathname: string
-  label: string
-  description: string
-}
-
 export interface Photo {
   id: string
   url: string
+  pathname: string
   label: string
 }
 
