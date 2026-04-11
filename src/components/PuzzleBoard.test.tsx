@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import PuzzleBoard from './PuzzleBoard'
@@ -37,6 +37,14 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
 })
 
+function getFirstUnsolvedCell(): HTMLElement {
+  for (let i = 0; i < 9; i++) {
+    const el = screen.getByTestId(`puzzle-cell-${i}`)
+    if (!el.classList.contains('solved') && !el.hasAttribute('disabled')) return el
+  }
+  throw new Error('No unsolved cell found')
+}
+
 describe('PuzzleBoard', () => {
   it('renders 9 puzzle cells', () => {
     render(<PuzzleBoard puzzle={testPuzzle} />)
@@ -50,15 +58,16 @@ describe('PuzzleBoard', () => {
     expect(screen.getByText('Test Puzzle', { exact: false })).toBeInTheDocument()
   })
 
-  it('opens overlay with clue when a cell is clicked', async () => {
+  it('opens overlay with a clue when a cell is clicked', async () => {
     vi.useRealTimers()
     const user = userEvent.setup()
     render(<PuzzleBoard puzzle={testPuzzle} />)
 
-    await user.click(screen.getByTestId('puzzle-cell-0'))
+    await user.click(getFirstUnsolvedCell())
 
     expect(screen.getByTestId('overlay')).toBeInTheDocument()
-    expect(screen.getByText('Find the cat')).toBeInTheDocument()
+    const overlay = screen.getByTestId('overlay')
+    expect(within(overlay).getByText(/Find the/)).toBeInTheDocument()
   })
 
   it('shows hint on wrong answer', async () => {
@@ -66,20 +75,35 @@ describe('PuzzleBoard', () => {
     const user = userEvent.setup()
     render(<PuzzleBoard puzzle={testPuzzle} />)
 
-    await user.click(screen.getByTestId('puzzle-cell-0'))
-    await user.click(screen.getByTestId('photo-p2'))
+    await user.click(getFirstUnsolvedCell())
+    const overlay = screen.getByTestId('overlay')
+    const clueText = within(overlay).getByText(/Find the/).textContent || ''
+
+    const correctAnimal = clueText.replace('Find the ', '').toLowerCase()
+    const wrongPhotoId = testPuzzle.photos.find(
+      (p) => p.label.toLowerCase() !== correctAnimal
+    )!.id
+
+    await user.click(screen.getByTestId(`photo-${wrongPhotoId}`))
 
     expect(screen.getByTestId('hint')).toBeInTheDocument()
-    expect(screen.getByText('It meows!', { exact: false })).toBeInTheDocument()
   })
 
-  it('solves a cell on correct answer and shows fireworks', async () => {
+  it('solves a cell on correct answer', async () => {
     vi.useRealTimers()
     const user = userEvent.setup()
     render(<PuzzleBoard puzzle={testPuzzle} />)
 
-    await user.click(screen.getByTestId('puzzle-cell-0'))
-    await user.click(screen.getByTestId('photo-p1'))
+    await user.click(getFirstUnsolvedCell())
+    const overlay = screen.getByTestId('overlay')
+    const clueText = within(overlay).getByText(/Find the/).textContent || ''
+
+    const correctAnimal = clueText.replace('Find the ', '').toLowerCase()
+    const correctPhotoId = testPuzzle.photos.find(
+      (p) => p.label.toLowerCase() === correctAnimal
+    )!.id
+
+    await user.click(screen.getByTestId(`photo-${correctPhotoId}`))
 
     await act(async () => {
       await new Promise((r) => setTimeout(r, 3000))
@@ -94,10 +118,31 @@ describe('PuzzleBoard', () => {
     const user = userEvent.setup()
     render(<PuzzleBoard puzzle={testPuzzle} />)
 
-    await user.click(screen.getByTestId('puzzle-cell-0'))
+    await user.click(getFirstUnsolvedCell())
     expect(screen.getByTestId('overlay')).toBeInTheDocument()
 
     await user.click(screen.getByTestId('overlay-close'))
     expect(screen.queryByTestId('overlay')).not.toBeInTheDocument()
+  })
+
+  it('shows replay button after first guess', async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    render(<PuzzleBoard puzzle={testPuzzle} />)
+
+    expect(screen.queryByText('Replay', { exact: false })).not.toBeInTheDocument()
+
+    await user.click(getFirstUnsolvedCell())
+    const overlay = screen.getByTestId('overlay')
+    const clueText = within(overlay).getByText(/Find the/).textContent || ''
+    const correctAnimal = clueText.replace('Find the ', '').toLowerCase()
+    const wrongPhotoId = testPuzzle.photos.find(
+      (p) => p.label.toLowerCase() !== correctAnimal
+    )!.id
+
+    await user.click(screen.getByTestId(`photo-${wrongPhotoId}`))
+    await user.click(screen.getByTestId('overlay-close'))
+
+    expect(screen.getByText('Replay', { exact: false })).toBeInTheDocument()
   })
 })

@@ -36,6 +36,15 @@ function generatePlaceholder(index: number): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [progress, setProgress] = useState<GameProgress>(() =>
     loadProgress(puzzle.id)
@@ -45,10 +54,18 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [showFireworks, setShowFireworks] = useState(false)
   const [wrongPick, setWrongPick] = useState<string | null>(null)
   const [pieceSize, setPieceSize] = useState(140)
+  const [hasGuessed, setHasGuessed] = useState(false)
+
+  const [shuffledCells, setShuffledCells] = useState<PuzzleCell[]>(() =>
+    shuffle(puzzle.cells)
+  )
+  const [shuffledPhotos, setShuffledPhotos] = useState<Photo[]>(() =>
+    shuffle(puzzle.photos.filter((p) => p.url))
+  )
 
   const completeCells = useMemo(
-    () => puzzle.cells.filter((c) => isCellComplete(c, puzzle.photos)),
-    [puzzle.cells, puzzle.photos]
+    () => shuffledCells.filter((c) => isCellComplete(c, puzzle.photos)),
+    [shuffledCells, puzzle.photos]
   )
 
   const allSolved = useMemo(
@@ -86,6 +103,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const handlePhotoSelect = useCallback(
     (photoId: string) => {
       if (!selectedCell) return
+      setHasGuessed(true)
 
       if (photoId === selectedCell.correctPhotoId) {
         setShowFireworks(true)
@@ -113,13 +131,14 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
 
   const handleRestart = useCallback(() => {
     setProgress({ puzzleId: puzzle.id, solvedCellIds: [] })
+    setHasGuessed(false)
+    setShuffledCells(shuffle(puzzle.cells))
+    setShuffledPhotos(shuffle(puzzle.photos.filter((p) => p.url)))
     localStorage.removeItem(`progress-${puzzle.id}`)
-  }, [puzzle.id])
+  }, [puzzle.id, puzzle.cells, puzzle.photos])
 
   const getPhotoForCell = (cell: PuzzleCell) =>
     puzzle.photos.find((p) => p.id === cell.correctPhotoId)
-
-  const playablePhotos = puzzle.photos.filter((p) => p.url)
 
   return (
     <div className="puzzle-board">
@@ -145,7 +164,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
       </header>
 
       <div className="jigsaw-grid">
-        {puzzle.cells.map((cell, index) => {
+        {shuffledCells.map((cell, index) => {
           const row = Math.floor(index / 3)
           const col = index % 3
           const solved = progress.solvedCellIds.includes(cell.id)
@@ -182,6 +201,14 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         })}
       </div>
 
+      {hasGuessed && !allSolved && (
+        <div className="replay-bar">
+          <button className="replay-btn" onClick={handleRestart}>
+            🔄 Replay
+          </button>
+        </div>
+      )}
+
       {allSolved && completeCells.length > 0 && (
         <div className="celebration-banner" data-testid="celebration">
           <h2>🎉 You solved the whole puzzle! 🎉</h2>
@@ -212,7 +239,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
               )}
             </div>
             <PhotoGrid
-              photos={playablePhotos}
+              photos={shuffledPhotos}
               onSelect={handlePhotoSelect}
               wrongPick={wrongPick}
               solvedPhotoIds={progress.solvedCellIds
