@@ -256,7 +256,12 @@ function PuzzleEditor({
   const [drafts, setDrafts] = useState<CellDraft[]>(() => puzzleToDrafts(puzzle))
   const [saving, setSaving] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
+  const [soundUrl, setSoundUrl] = useState(puzzle.celebrationSoundUrl || '')
+  const [soundPathname, setSoundPathname] = useState(puzzle.celebrationSoundPathname || '')
+  const [pendingSoundFile, setPendingSoundFile] = useState<File | null>(null)
+  const [pendingSoundName, setPendingSoundName] = useState('')
   const fileRefs = useRef<(HTMLInputElement | null)[]>([])
+  const soundFileRef = useRef<HTMLInputElement>(null)
 
   function addCell() {
     if (drafts.length >= 9) { toast('error', 'Maximum 9 cells for a 3×3 grid.'); return }
@@ -342,8 +347,28 @@ function PuzzleEditor({
         cells.push({ id: d.id, clue: d.clue, hint: d.hint, correctPhotoId: photo.id })
       }
 
+      let finalSoundUrl = soundUrl
+      let finalSoundPathname = soundPathname
+      if (pendingSoundFile) {
+        setUploadProgress('Uploading celebration sound...')
+        const result = await uploadImage(pendingSoundFile)
+        finalSoundUrl = result.url
+        finalSoundPathname = result.pathname
+        setSoundUrl(result.url)
+        setSoundPathname(result.pathname)
+        setPendingSoundFile(null)
+        setPendingSoundName('')
+      }
+
       setUploadProgress('Saving puzzle...')
-      await onSave({ ...puzzle, name, cells, photos })
+      await onSave({
+        ...puzzle,
+        name,
+        cells,
+        photos,
+        celebrationSoundUrl: finalSoundUrl || undefined,
+        celebrationSoundPathname: finalSoundPathname || undefined,
+      })
 
       setDrafts(drafts.map((d, i) => ({
         ...d,
@@ -380,6 +405,60 @@ function PuzzleEditor({
           placeholder="e.g. Cruise Ship Adventure"
           data-testid="puzzle-name"
         />
+      </div>
+
+      <div className="editor-section">
+        <label>🔊 Celebration Sound (optional)</label>
+        <p className="editor-hint">
+          Upload a WAV file (up to 3 seconds) to play when the child guesses correctly. If none is set, the default fireworks sound plays.
+        </p>
+        {soundUrl && !pendingSoundFile ? (
+          <div className="sound-preview">
+            <audio controls src={soundUrl} />
+            <button
+              className="sound-clear-btn"
+              onClick={() => {
+                setSoundUrl('')
+                setSoundPathname('')
+              }}
+            >
+              ✕ Remove
+            </button>
+          </div>
+        ) : pendingSoundFile ? (
+          <div className="sound-preview">
+            <span className="sound-pending-name">🎵 {pendingSoundName}</span>
+            <button
+              className="sound-clear-btn"
+              onClick={() => {
+                setPendingSoundFile(null)
+                setPendingSoundName('')
+              }}
+            >
+              ✕ Remove
+            </button>
+          </div>
+        ) : (
+          <div className="sound-upload">
+            <label className="sound-upload-label">
+              <span>🎵 Upload WAV</span>
+              <input
+                ref={soundFileRef}
+                type="file"
+                accept=".wav,audio/wav,audio/x-wav"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setPendingSoundFile(file)
+                    setPendingSoundName(file.name)
+                  }
+                  e.target.value = ''
+                }}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="editor-section">

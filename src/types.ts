@@ -17,6 +17,8 @@ export interface Puzzle {
   name: string
   cells: PuzzleCell[]
   photos: Photo[]
+  celebrationSoundUrl?: string
+  celebrationSoundPathname?: string
   createdAt: string
 }
 
