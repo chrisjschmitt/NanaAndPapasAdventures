@@ -117,6 +117,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
       setHasGuessed(true)
 
       if (photoId === selectedCell.correctPhotoId) {
+        const solvedCellId = selectedCell.id
         const cellSound = selectedCell.soundUrl || puzzle.celebrationSoundUrl
         if (cellSound) {
           playCustomSound(cellSound)
@@ -124,13 +125,13 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
           playFireworksSound(2500)
         }
         setShowFireworks(true)
-        setProgress((prev) => ({
-          ...prev,
-          solvedCellIds: [...prev.solvedCellIds, selectedCell.id],
-        }))
+        setSelectedCell(null)
         setTimeout(() => {
-          setSelectedCell(null)
           setShowFireworks(false)
+          setProgress((prev) => ({
+            ...prev,
+            solvedCellIds: [...prev.solvedCellIds, solvedCellId],
+          }))
         }, 2800)
       } else {
         setWrongPick(photoId)
@@ -211,12 +212,12 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
               >
                 {hasPrize && (
                   <div
-                    className={`tile-prize-slice ${solved ? 'visible' : ''}`}
+                    className="tile-prize-slice"
                     style={prizeSliceStyle}
                   />
                 )}
 
-                {!solved && complete && (
+                {complete && (
                   <div
                     className="tile-cover"
                     style={{ background: TILE_COLORS[index % TILE_COLORS.length] }}
@@ -225,7 +226,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
                   </div>
                 )}
 
-                {!solved && !complete && (
+                {!complete && (
                   <div className="tile-cover tile-cover-incomplete">
                     <span className="tile-coming-soon">🚧</span>
                   </div>
