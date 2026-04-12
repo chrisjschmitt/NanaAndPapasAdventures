@@ -34,6 +34,14 @@ function shuffle<T>(arr: T[]): T[] {
   return shuffled
 }
 
+function pickRound(cells: PuzzleCell[], photos: Photo[]): { cells: PuzzleCell[]; photos: Photo[] } {
+  const complete = cells.filter((c) => isCellComplete(c, photos))
+  const picked = shuffle(complete).slice(0, 9)
+  const pickedPhotoIds = new Set(picked.map((c) => c.correctPhotoId))
+  const pickedPhotos = photos.filter((p) => pickedPhotoIds.has(p.id))
+  return { cells: shuffle(picked), photos: shuffle(pickedPhotos) }
+}
+
 const TILE_COLORS = [
   'linear-gradient(135deg, #ff6b6b, #ee5a24)',
   'linear-gradient(135deg, #ffd166, #f7b731)',
@@ -59,17 +67,9 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [gridSize, setGridSize] = useState(300)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  const [shuffledCells, setShuffledCells] = useState<PuzzleCell[]>(() =>
-    shuffle(puzzle.cells)
-  )
-  const [shuffledPhotos, setShuffledPhotos] = useState<Photo[]>(() =>
-    shuffle(puzzle.photos.filter((p) => p.url))
-  )
+  const [round, setRound] = useState(() => pickRound(puzzle.cells, puzzle.photos))
 
-  const completeCells = useMemo(
-    () => shuffledCells.filter((c) => isCellComplete(c, puzzle.photos)),
-    [shuffledCells, puzzle.photos]
-  )
+  const completeCells = round.cells
 
   const allSolved = useMemo(
     () =>
@@ -97,17 +97,17 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const handleCellClick = useCallback(
     (cell: PuzzleCell) => {
       if (progress.solvedCellIds.includes(cell.id)) {
-        const photo = puzzle.photos.find((p) => p.id === cell.correctPhotoId)
+        const photo = round.photos.find((p) => p.id === cell.correctPhotoId)
         if (photo) setTappedPhoto(photo)
         return
       }
-      if (!isCellComplete(cell, puzzle.photos)) return
+      if (!isCellComplete(cell, round.photos)) return
       ensureAudioContext()
       setSelectedCell(cell)
       setHintVisible(false)
       setWrongPick(null)
     },
-    [progress.solvedCellIds, puzzle.photos]
+    [progress.solvedCellIds, round.photos]
   )
 
   const handlePhotoSelect = useCallback(
@@ -147,8 +147,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const handleRestart = useCallback(() => {
     setProgress({ puzzleId: puzzle.id, solvedCellIds: [] })
     setHasGuessed(false)
-    setShuffledCells(shuffle(puzzle.cells))
-    setShuffledPhotos(shuffle(puzzle.photos.filter((p) => p.url)))
+    setRound(pickRound(puzzle.cells, puzzle.photos))
     localStorage.removeItem(`progress-${puzzle.id}`)
   }, [puzzle.id, puzzle.cells, puzzle.photos])
 
@@ -184,11 +183,11 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
             padding: allSolved ? 0 : gap,
           }}
         >
-          {shuffledCells.map((cell, index) => {
+          {round.cells.map((cell, index) => {
             const row = Math.floor(index / 3)
             const col = index % 3
             const solved = progress.solvedCellIds.includes(cell.id)
-            const complete = isCellComplete(cell, puzzle.photos)
+            const complete = isCellComplete(cell, round.photos)
             const isRecent = recentlySolved === cell.id
 
             const innerSize = allSolved ? gridSize / 3 : cellSize
@@ -270,7 +269,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
               )}
             </div>
             <PhotoGrid
-              photos={shuffledPhotos}
+              photos={round.photos}
               onSelect={handlePhotoSelect}
               wrongPick={wrongPick}
               solvedPhotoIds={progress.solvedCellIds

@@ -35,9 +35,7 @@ export default function PuzzleSelector({
               <span className="puzzle-card-icon">🧩</span>
               <span className="puzzle-card-name">{puzzle.name || 'Untitled'}</span>
               <span className="puzzle-card-count">
-                {complete === puzzle.cells.length
-                  ? `${puzzle.cells.length} pieces`
-                  : `${complete}/${puzzle.cells.length} ready`}
+                {complete} piece{complete !== 1 ? 's' : ''} ready
               </span>
             </button>
           )
