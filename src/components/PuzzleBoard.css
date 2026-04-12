@@ -75,6 +75,12 @@
   border-radius: 8px;
   overflow: hidden;
   box-sizing: content-box;
+  transition: gap 0.4s ease, padding 0.4s ease, border-radius 0.4s ease;
+}
+
+.reveal-grid.all-solved {
+  background: transparent;
+  border-radius: 4px;
 }
 
 /* Each tile: sized in JS to be a perfect square */
@@ -86,6 +92,11 @@
   padding: 0;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  transition: border-radius 0.4s ease, box-shadow 0.4s ease;
+}
+
+.all-solved .reveal-tile {
+  border-radius: 0;
 }
 
 .reveal-tile:not(.revealed):not(.incomplete):hover {
@@ -102,12 +113,19 @@
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 0.8s ease;
+  transition: opacity 0.8s ease, filter 0.6s ease;
   background-repeat: no-repeat;
 }
 
 .reveal-tile.revealed .tile-prize-slice {
   opacity: 1;
+  filter: brightness(0.7) saturate(0.6);
+}
+
+.all-solved .reveal-tile.revealed .tile-prize-slice {
+  opacity: 1;
+  filter: none;
+  transition: opacity 0.4s ease, filter 0.8s ease;
 }
 
 /* Cover: fades out when tile is solved */
@@ -118,6 +136,12 @@
 .reveal-tile.revealed .tile-cover {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Glow on recently solved tile */
+.reveal-tile.recently-solved {
+  box-shadow: 0 0 20px 4px rgba(6, 214, 160, 0.6);
+  z-index: 5;
 }
 
 /* Opaque cover over each unsolved tile */
