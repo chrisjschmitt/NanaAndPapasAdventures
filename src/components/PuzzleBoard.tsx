@@ -55,6 +55,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [wrongPick, setWrongPick] = useState<string | null>(null)
   const [pieceSize, setPieceSize] = useState(140)
   const [hasGuessed, setHasGuessed] = useState(false)
+  const [activeSoundUrl, setActiveSoundUrl] = useState<string | undefined>(undefined)
 
   const [shuffledCells, setShuffledCells] = useState<PuzzleCell[]>(() =>
     shuffle(puzzle.cells)
@@ -106,6 +107,8 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
       setHasGuessed(true)
 
       if (photoId === selectedCell.correctPhotoId) {
+        const cellSound = selectedCell.soundUrl || puzzle.celebrationSoundUrl || undefined
+        setActiveSoundUrl(cellSound)
         setShowFireworks(true)
         setProgress((prev) => ({
           ...prev,
@@ -114,13 +117,14 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         setTimeout(() => {
           setSelectedCell(null)
           setShowFireworks(false)
+          setActiveSoundUrl(undefined)
         }, 2800)
       } else {
         setWrongPick(photoId)
         setHintVisible(true)
       }
     },
-    [selectedCell]
+    [selectedCell, puzzle.celebrationSoundUrl]
   )
 
   const handleCloseOverlay = useCallback(() => {
@@ -253,7 +257,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
       <Fireworks
         active={showFireworks}
         duration={2500}
-        soundUrl={puzzle.celebrationSoundUrl}
+        soundUrl={activeSoundUrl}
         onComplete={() => setShowFireworks(false)}
       />
     </div>

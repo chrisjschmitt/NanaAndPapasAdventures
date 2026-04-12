@@ -10,6 +10,8 @@ export interface PuzzleCell {
   clue: string
   hint: string
   correctPhotoId: string
+  soundUrl?: string
+  soundPathname?: string
 }
 
 export interface Puzzle {

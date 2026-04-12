@@ -272,7 +272,56 @@
   .cell-photo-preview, .cell-photo-upload { width: 100%; height: 160px; }
 }
 
-/* Sound upload */
+/* Per-cell sound */
+.cell-sound-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cell-sound-player {
+  height: 32px;
+  flex: 1;
+}
+
+.cell-sound-name {
+  font-size: 0.8rem;
+  color: var(--text, #6b6375);
+  flex: 1;
+}
+
+.sound-clear-btn-sm {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #ef476f;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.sound-clear-btn-sm:hover { background: #fef2f2; }
+
+.cell-sound-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px dashed var(--border, #e5e4e7);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text, #6b6375);
+  transition: border-color 0.2s;
+}
+
+.cell-sound-upload:hover {
+  border-color: var(--accent, #aa3bff);
+  color: var(--accent, #aa3bff);
+}
+
+/* Puzzle-level sound upload */
 .sound-preview {
   display: flex;
   align-items: center;

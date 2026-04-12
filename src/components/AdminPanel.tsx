@@ -31,6 +31,10 @@ interface CellDraft {
   photo: Photo | null
   pendingFile: File | null
   pendingPreview: string
+  soundUrl: string
+  soundPathname: string
+  pendingSoundFile: File | null
+  pendingSoundName: string
 }
 
 export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps) {
@@ -240,7 +244,12 @@ function PuzzleListView({
 function puzzleToDrafts(puzzle: Puzzle): CellDraft[] {
   return puzzle.cells.map((cell) => {
     const photo = puzzle.photos.find((p) => p.id === cell.correctPhotoId) ?? null
-    return { id: cell.id, clue: cell.clue, hint: cell.hint, photo, pendingFile: null, pendingPreview: '' }
+    return {
+      id: cell.id, clue: cell.clue, hint: cell.hint, photo,
+      pendingFile: null, pendingPreview: '',
+      soundUrl: cell.soundUrl || '', soundPathname: cell.soundPathname || '',
+      pendingSoundFile: null, pendingSoundName: '',
+    }
   })
 }
 
@@ -266,7 +275,9 @@ function PuzzleEditor({
   function addCell() {
     if (drafts.length >= 9) { toast('error', 'Maximum 9 cells for a 3×3 grid.'); return }
     setDrafts((prev) => [...prev, {
-      id: generateId(), clue: '', hint: '', photo: null, pendingFile: null, pendingPreview: '',
+      id: generateId(), clue: '', hint: '', photo: null,
+      pendingFile: null, pendingPreview: '',
+      soundUrl: '', soundPathname: '', pendingSoundFile: null, pendingSoundName: '',
     }])
   }
 
@@ -343,8 +354,21 @@ function PuzzleEditor({
           photo = { ...photo, url, pathname }
         }
 
+        let cellSoundUrl = d.soundUrl
+        let cellSoundPathname = d.soundPathname
+        if (d.pendingSoundFile) {
+          setUploadProgress(`Uploading sound for cell ${i + 1}...`)
+          const sndResult = await uploadImage(d.pendingSoundFile)
+          cellSoundUrl = sndResult.url
+          cellSoundPathname = sndResult.pathname
+        }
+
         photos.push(photo)
-        cells.push({ id: d.id, clue: d.clue, hint: d.hint, correctPhotoId: photo.id })
+        cells.push({
+          id: d.id, clue: d.clue, hint: d.hint, correctPhotoId: photo.id,
+          soundUrl: cellSoundUrl || undefined,
+          soundPathname: cellSoundPathname || undefined,
+        })
       }
 
       let finalSoundUrl = soundUrl
@@ -375,6 +399,10 @@ function PuzzleEditor({
         photo: photos[i],
         pendingFile: null,
         pendingPreview: d.pendingPreview ? (URL.revokeObjectURL(d.pendingPreview), '') : '',
+        soundUrl: cells[i].soundUrl || '',
+        soundPathname: cells[i].soundPathname || '',
+        pendingSoundFile: null,
+        pendingSoundName: '',
       })))
 
       if (completeCount < drafts.length) {
@@ -547,6 +575,47 @@ function PuzzleEditor({
                     placeholder="Hint — shown on wrong answer"
                     className="editor-input"
                   />
+                  <div className="cell-sound-row">
+                    {draft.soundUrl && !draft.pendingSoundFile ? (
+                      <>
+                        <audio controls src={draft.soundUrl} className="cell-sound-player" />
+                        <button
+                          className="sound-clear-btn-sm"
+                          onClick={() => setDrafts((prev) => prev.map((dd, ii) =>
+                            ii === index ? { ...dd, soundUrl: '', soundPathname: '' } : dd
+                          ))}
+                        >✕</button>
+                      </>
+                    ) : draft.pendingSoundFile ? (
+                      <>
+                        <span className="cell-sound-name">🎵 {draft.pendingSoundName}</span>
+                        <button
+                          className="sound-clear-btn-sm"
+                          onClick={() => setDrafts((prev) => prev.map((dd, ii) =>
+                            ii === index ? { ...dd, pendingSoundFile: null, pendingSoundName: '' } : dd
+                          ))}
+                        >✕</button>
+                      </>
+                    ) : (
+                      <label className="cell-sound-upload">
+                        🎵 Sound
+                        <input
+                          type="file"
+                          accept=".wav,audio/wav,audio/x-wav"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              setDrafts((prev) => prev.map((dd, ii) =>
+                                ii === index ? { ...dd, pendingSoundFile: file, pendingSoundName: file.name } : dd
+                              ))
+                            }
+                            e.target.value = ''
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
