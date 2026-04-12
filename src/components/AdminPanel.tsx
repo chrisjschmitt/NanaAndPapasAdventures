@@ -269,6 +269,10 @@ function PuzzleEditor({
   const [soundPathname, setSoundPathname] = useState(puzzle.celebrationSoundPathname || '')
   const [pendingSoundFile, setPendingSoundFile] = useState<File | null>(null)
   const [pendingSoundName, setPendingSoundName] = useState('')
+  const [prizeUrl, setPrizeUrl] = useState(puzzle.prizeImageUrl || '')
+  const [prizePathname, setPrizePathname] = useState(puzzle.prizeImagePathname || '')
+  const [pendingPrizeFile, setPendingPrizeFile] = useState<File | null>(null)
+  const [pendingPrizePreview, setPendingPrizePreview] = useState('')
   const fileRefs = useRef<(HTMLInputElement | null)[]>([])
   const soundFileRef = useRef<HTMLInputElement>(null)
 
@@ -384,6 +388,19 @@ function PuzzleEditor({
         setPendingSoundName('')
       }
 
+      let finalPrizeUrl = prizeUrl
+      let finalPrizePathname = prizePathname
+      if (pendingPrizeFile) {
+        setUploadProgress('Uploading prize image...')
+        const prizeResult = await uploadImage(pendingPrizeFile)
+        finalPrizeUrl = prizeResult.url
+        finalPrizePathname = prizeResult.pathname
+        setPrizeUrl(prizeResult.url)
+        setPrizePathname(prizeResult.pathname)
+        setPendingPrizeFile(null)
+        if (pendingPrizePreview) { URL.revokeObjectURL(pendingPrizePreview); setPendingPrizePreview('') }
+      }
+
       setUploadProgress('Saving puzzle...')
       await onSave({
         ...puzzle,
@@ -392,6 +409,8 @@ function PuzzleEditor({
         photos,
         celebrationSoundUrl: finalSoundUrl || undefined,
         celebrationSoundPathname: finalSoundPathname || undefined,
+        prizeImageUrl: finalPrizeUrl || undefined,
+        prizeImagePathname: finalPrizePathname || undefined,
       })
 
       setDrafts(drafts.map((d, i) => ({
@@ -433,6 +452,46 @@ function PuzzleEditor({
           placeholder="e.g. Cruise Ship Adventure"
           data-testid="puzzle-name"
         />
+      </div>
+
+      <div className="editor-section">
+        <label>🏆 Prize Image (optional)</label>
+        <p className="editor-hint">
+          Upload an image that is revealed as the child solves each piece — like a scratch-off card!
+        </p>
+        {(prizeUrl && !pendingPrizeFile) || pendingPrizePreview ? (
+          <div className="prize-preview">
+            <img src={pendingPrizePreview || prizeUrl} alt="Prize" className="prize-preview-img" />
+            <button
+              className="sound-clear-btn"
+              onClick={() => {
+                setPrizeUrl('')
+                setPrizePathname('')
+                if (pendingPrizePreview) { URL.revokeObjectURL(pendingPrizePreview); setPendingPrizePreview('') }
+                setPendingPrizeFile(null)
+              }}
+            >
+              ✕ Remove
+            </button>
+          </div>
+        ) : (
+          <label className="sound-upload-label">
+            <span>🖼️ Upload Prize Image</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  setPendingPrizeFile(file)
+                  setPendingPrizePreview(URL.createObjectURL(file))
+                }
+                e.target.value = ''
+              }}
+              style={{ display: 'none' }}
+            />
+          </label>
+        )}
       </div>
 
       <div className="editor-section">

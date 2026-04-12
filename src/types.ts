@@ -21,6 +21,8 @@ export interface Puzzle {
   photos: Photo[]
   celebrationSoundUrl?: string
   celebrationSoundPathname?: string
+  prizeImageUrl?: string
+  prizeImagePathname?: string
   createdAt: string
 }
 

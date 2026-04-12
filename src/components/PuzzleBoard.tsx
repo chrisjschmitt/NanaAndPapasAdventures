@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { Puzzle, PuzzleCell, Photo, GameProgress } from '../types'
-import JigsawPiece from './JigsawPiece'
 import PhotoGrid from './PhotoGrid'
 import Fireworks from './Fireworks'
 import { ensureAudioContext, playCustomSound, playFireworksSound } from '../lib/fireworksSound'
@@ -27,16 +26,6 @@ function isCellComplete(cell: PuzzleCell, photos: Photo[]): boolean {
   return !!photo?.url
 }
 
-function generatePlaceholder(index: number): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-    <rect width="200" height="200" fill="#e5e4e7" rx="12"/>
-    <text x="100" y="90" text-anchor="middle" font-size="40" fill="#b0adb5">🚧</text>
-    <text x="100" y="130" text-anchor="middle" font-size="14" fill="#9a979f" font-family="system-ui">Coming Soon</text>
-    <text x="100" y="155" text-anchor="middle" font-size="12" fill="#b0adb5" font-family="system-ui">Cell ${index + 1}</text>
-  </svg>`
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`
-}
-
 function shuffle<T>(arr: T[]): T[] {
   const shuffled = [...arr]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -46,6 +35,18 @@ function shuffle<T>(arr: T[]): T[] {
   return shuffled
 }
 
+const TILE_COLORS = [
+  'linear-gradient(135deg, #ff6b6b, #ee5a24)',
+  'linear-gradient(135deg, #ffd166, #f7b731)',
+  'linear-gradient(135deg, #06d6a0, #1dd1a1)',
+  'linear-gradient(135deg, #118ab2, #0abde3)',
+  'linear-gradient(135deg, #6a4c93, #a55eea)',
+  'linear-gradient(135deg, #ef476f, #e84393)',
+  'linear-gradient(135deg, #ff9f43, #f39c12)',
+  'linear-gradient(135deg, #00cec9, #55efc4)',
+  'linear-gradient(135deg, #fd79a8, #e17055)',
+]
+
 export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [progress, setProgress] = useState<GameProgress>(() =>
     loadProgress(puzzle.id)
@@ -54,8 +55,8 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [hintVisible, setHintVisible] = useState(false)
   const [showFireworks, setShowFireworks] = useState(false)
   const [wrongPick, setWrongPick] = useState<string | null>(null)
-  const [pieceSize, setPieceSize] = useState(140)
   const [hasGuessed, setHasGuessed] = useState(false)
+  const [tappedPhoto, setTappedPhoto] = useState<Photo | null>(null)
 
   const [shuffledCells, setShuffledCells] = useState<PuzzleCell[]>(() =>
     shuffle(puzzle.cells)
@@ -80,19 +81,13 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
     localStorage.setItem(`progress-${puzzle.id}`, JSON.stringify(progress))
   }, [progress, puzzle.id])
 
-  useEffect(() => {
-    function updateSize() {
-      const maxGridWidth = Math.min(window.innerWidth - 40, 540)
-      setPieceSize(Math.floor(maxGridWidth / 3.6))
-    }
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
-
   const handleCellClick = useCallback(
     (cell: PuzzleCell) => {
-      if (progress.solvedCellIds.includes(cell.id)) return
+      if (progress.solvedCellIds.includes(cell.id)) {
+        const photo = puzzle.photos.find((p) => p.id === cell.correctPhotoId)
+        if (photo) setTappedPhoto(photo)
+        return
+      }
       if (!isCellComplete(cell, puzzle.photos)) return
       ensureAudioContext()
       setSelectedCell(cell)
@@ -145,98 +140,79 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
     localStorage.removeItem(`progress-${puzzle.id}`)
   }, [puzzle.id, puzzle.cells, puzzle.photos])
 
-  const getPhotoForCell = (cell: PuzzleCell) =>
-    puzzle.photos.find((p) => p.id === cell.correctPhotoId)
-
   return (
-    <div className="puzzle-board">
-      <header className="puzzle-header">
-        <div className="puzzle-header-left">
+    <div className="reveal-board">
+      <header className="reveal-header">
+        <div className="reveal-header-left">
           {onBack && (
-            <button className="back-btn" onClick={onBack}>
-              ← Back
-            </button>
+            <button className="reveal-back-btn" onClick={onBack}>←</button>
           )}
         </div>
-        <div className="puzzle-header-center">
-          <h1>🧩 {puzzle.name}</h1>
-          <p className="puzzle-subtitle">
-            Tap a puzzle piece to reveal the clue!
-          </p>
+        <div className="reveal-header-center">
+          <h1>{puzzle.name}</h1>
         </div>
-        <div className="puzzle-header-right">
-          <span className="score-badge">
+        <div className="reveal-header-right">
+          <span className="reveal-score">
             {progress.solvedCellIds.length}/{completeCells.length} ⭐
           </span>
         </div>
       </header>
 
-      <div className="jigsaw-grid">
-        {shuffledCells.map((cell, index) => {
-          const row = Math.floor(index / 3)
-          const col = index % 3
-          const solved = progress.solvedCellIds.includes(cell.id)
-          const photo = getPhotoForCell(cell)
-          const complete = isCellComplete(cell, puzzle.photos)
-          return (
-            <JigsawPiece
-              key={cell.id}
-              row={row}
-              col={col}
-              size={pieceSize}
-              solved={solved}
-              onClick={() => handleCellClick(cell)}
-              disabled={solved || !complete}
-              testId={`puzzle-cell-${index}`}
-            >
-              {solved && photo ? (
-                <div className="solved-content">
-                  <img src={photo.url} alt={photo.label} />
-                  <span className="solved-label">{photo.label}</span>
-                </div>
-              ) : !complete ? (
-                <div className="placeholder-content">
-                  <img src={generatePlaceholder(index)} alt="Coming soon" />
-                </div>
-              ) : (
-                <div className="unsolved-content">
-                  <span className="piece-number">{index + 1}</span>
-                  <span className="piece-icon">❓</span>
-                </div>
-              )}
-            </JigsawPiece>
-          )
-        })}
+      <div className="reveal-grid-wrapper">
+        {puzzle.prizeImageUrl && (
+          <img
+            src={puzzle.prizeImageUrl}
+            alt="Prize"
+            className="reveal-prize-image"
+          />
+        )}
+        <div className={`reveal-grid ${puzzle.prizeImageUrl ? 'has-prize' : ''}`}>
+          {shuffledCells.map((cell, index) => {
+            const solved = progress.solvedCellIds.includes(cell.id)
+            const complete = isCellComplete(cell, puzzle.photos)
+            return (
+              <button
+                key={cell.id}
+                className={`reveal-tile ${solved ? 'revealed' : ''} ${!complete ? 'incomplete' : ''}`}
+                onClick={() => handleCellClick(cell)}
+                disabled={!complete && !solved}
+                data-testid={`puzzle-cell-${index}`}
+                style={
+                  !solved
+                    ? { background: complete ? TILE_COLORS[index % TILE_COLORS.length] : '#d1d5db' }
+                    : undefined
+                }
+              >
+                {!solved && complete && (
+                  <span className="tile-question">?</span>
+                )}
+                {!solved && !complete && (
+                  <span className="tile-coming-soon">🚧</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {hasGuessed && !allSolved && (
-        <div className="replay-bar">
-          <button className="replay-btn" onClick={handleRestart}>
-            🔄 Replay
-          </button>
+        <div className="reveal-replay-bar">
+          <button className="replay-btn" onClick={handleRestart}>🔄 Replay</button>
         </div>
       )}
 
       {allSolved && completeCells.length > 0 && (
-        <div className="celebration-banner" data-testid="celebration">
-          <h2>🎉 You solved the whole puzzle! 🎉</h2>
-          <p>Amazing job, adventurer!</p>
-          <button className="restart-btn" onClick={handleRestart}>
-            🔄 Play Again
-          </button>
+        <div className="reveal-celebration" data-testid="celebration">
+          <h2>🎉 You solved it! 🎉</h2>
+          <p>Tap the picture to explore each piece!</p>
+          <button className="restart-btn" onClick={handleRestart}>🔄 Play Again</button>
         </div>
       )}
 
       {selectedCell && !showFireworks && (
         <div className="overlay" data-testid="overlay">
           <div className="overlay-content">
-            <button
-              className="overlay-close"
-              onClick={handleCloseOverlay}
-              data-testid="overlay-close"
-            >
-              ✕
-            </button>
+            <button className="overlay-close" onClick={handleCloseOverlay} data-testid="overlay-close">✕</button>
             <div className="clue-box">
               <h2>🔍 Clue</h2>
               <p className="clue-text">{selectedCell.clue}</p>
@@ -254,6 +230,16 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
                 .map((cid) => puzzle.cells.find((c) => c.id === cid)?.correctPhotoId)
                 .filter(Boolean) as string[]}
             />
+          </div>
+        </div>
+      )}
+
+      {tappedPhoto && (
+        <div className="photo-zoom-overlay" onClick={() => setTappedPhoto(null)}>
+          <div className="photo-zoom-content" onClick={(e) => e.stopPropagation()}>
+            <img src={tappedPhoto.url} alt={tappedPhoto.label} />
+            <p className="photo-zoom-label">{tappedPhoto.label}</p>
+            <button className="photo-zoom-close" onClick={() => setTappedPhoto(null)}>✕ Close</button>
           </div>
         </div>
       )}
