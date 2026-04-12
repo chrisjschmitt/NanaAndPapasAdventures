@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Puzzle, PuzzleCell, Photo, GameProgress } from '../types'
 import PhotoGrid from './PhotoGrid'
 import Fireworks from './Fireworks'
@@ -57,6 +57,8 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [wrongPick, setWrongPick] = useState<string | null>(null)
   const [hasGuessed, setHasGuessed] = useState(false)
   const [tappedPhoto, setTappedPhoto] = useState<Photo | null>(null)
+  const [gridSize, setGridSize] = useState(300)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   const [shuffledCells, setShuffledCells] = useState<PuzzleCell[]>(() =>
     shuffle(puzzle.cells)
@@ -80,6 +82,18 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   useEffect(() => {
     localStorage.setItem(`progress-${puzzle.id}`, JSON.stringify(progress))
   }, [progress, puzzle.id])
+
+  useEffect(() => {
+    function updateSize() {
+      if (!wrapperRef.current) return
+      const w = wrapperRef.current.clientWidth
+      const h = wrapperRef.current.clientHeight
+      setGridSize(Math.floor(Math.min(w, h)))
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
 
   const handleCellClick = useCallback(
     (cell: PuzzleCell) => {
@@ -140,6 +154,10 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
     localStorage.removeItem(`progress-${puzzle.id}`)
   }, [puzzle.id, puzzle.cells, puzzle.photos])
 
+  const gap = 4
+  const cellSize = Math.floor((gridSize - gap * 4) / 3)
+  const hasPrize = !!puzzle.prizeImageUrl
+
   return (
     <div className="reveal-board">
       <header className="reveal-header">
@@ -158,18 +176,30 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         </div>
       </header>
 
-      <div className="reveal-grid-wrapper">
-        {puzzle.prizeImageUrl && (
-          <img
-            src={puzzle.prizeImageUrl}
-            alt="Prize"
-            className="reveal-prize-image"
-          />
-        )}
-        <div className={`reveal-grid ${puzzle.prizeImageUrl ? 'has-prize' : ''}`}>
+      <div className="reveal-grid-wrapper" ref={wrapperRef}>
+        <div
+          className="reveal-grid"
+          style={{
+            width: gridSize,
+            height: gridSize,
+            gap,
+            padding: gap,
+          }}
+        >
           {shuffledCells.map((cell, index) => {
+            const row = Math.floor(index / 3)
+            const col = index % 3
             const solved = progress.solvedCellIds.includes(cell.id)
             const complete = isCellComplete(cell, puzzle.photos)
+
+            const prizeSliceStyle = hasPrize
+              ? {
+                  backgroundImage: `url(${puzzle.prizeImageUrl})`,
+                  backgroundSize: `${gridSize - gap * 2}px ${gridSize - gap * 2}px`,
+                  backgroundPosition: `-${col * (cellSize + gap)}px -${row * (cellSize + gap)}px`,
+                }
+              : undefined
+
             return (
               <button
                 key={cell.id}
@@ -177,17 +207,32 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
                 onClick={() => handleCellClick(cell)}
                 disabled={!complete && !solved}
                 data-testid={`puzzle-cell-${index}`}
-                style={
-                  !solved
-                    ? { background: complete ? TILE_COLORS[index % TILE_COLORS.length] : '#d1d5db' }
-                    : undefined
-                }
+                style={{ width: cellSize, height: cellSize }}
               >
-                {!solved && complete && (
-                  <span className="tile-question">?</span>
+                {hasPrize && (
+                  <div
+                    className={`tile-prize-slice ${solved ? 'visible' : ''}`}
+                    style={prizeSliceStyle}
+                  />
                 )}
+
+                {!solved && complete && (
+                  <div
+                    className="tile-cover"
+                    style={{ background: TILE_COLORS[index % TILE_COLORS.length] }}
+                  >
+                    <span className="tile-question">?</span>
+                  </div>
+                )}
+
                 {!solved && !complete && (
-                  <span className="tile-coming-soon">🚧</span>
+                  <div className="tile-cover tile-cover-incomplete">
+                    <span className="tile-coming-soon">🚧</span>
+                  </div>
+                )}
+
+                {solved && !hasPrize && (
+                  <div className="tile-solved-no-prize">✅</div>
                 )}
               </button>
             )
