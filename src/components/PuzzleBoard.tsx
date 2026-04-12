@@ -253,6 +253,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
       <Fireworks
         active={showFireworks}
         duration={2500}
+        soundUrl={puzzle.celebrationSoundUrl}
         onComplete={() => setShowFireworks(false)}
       />
     </div>

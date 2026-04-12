@@ -28,12 +28,14 @@ const COLORS = [
 interface FireworksProps {
   active: boolean
   duration?: number
+  soundUrl?: string
   onComplete?: () => void
 }
 
 export default function Fireworks({
   active,
   duration = 2500,
+  soundUrl,
   onComplete,
 }: FireworksProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -72,7 +74,15 @@ export default function Fireworks({
     particles.current = []
     startTime.current = Date.now()
 
-    playFireworksSound(duration)
+    if (soundUrl) {
+      try {
+        const audio = new Audio(soundUrl)
+        audio.volume = 0.7
+        audio.play().catch(() => {})
+      } catch { /* audio not available */ }
+    } else {
+      playFireworksSound(duration)
+    }
 
     const launchBursts = () => {
       const w = canvas.width
@@ -137,7 +147,7 @@ export default function Fireworks({
       clearInterval(burstInterval)
       cancelAnimationFrame(animFrame.current)
     }
-  }, [active, burst, duration, onComplete])
+  }, [active, burst, duration, soundUrl, onComplete])
 
   if (!active) return null
 
