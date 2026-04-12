@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Puzzle, PuzzleCell, Photo, GameProgress } from '../types'
 import PhotoGrid from './PhotoGrid'
-import Fireworks from './Fireworks'
 import { ensureAudioContext, playCustomSound, playFireworksSound } from '../lib/fireworksSound'
 import './PuzzleBoard.css'
 
@@ -53,7 +52,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   )
   const [selectedCell, setSelectedCell] = useState<PuzzleCell | null>(null)
   const [hintVisible, setHintVisible] = useState(false)
-  const [showFireworks, setShowFireworks] = useState(false)
+  const [recentlySolved, setRecentlySolved] = useState<string | null>(null)
   const [wrongPick, setWrongPick] = useState<string | null>(null)
   const [hasGuessed, setHasGuessed] = useState(false)
   const [tappedPhoto, setTappedPhoto] = useState<Photo | null>(null)
@@ -124,15 +123,13 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         } else {
           playFireworksSound(2500)
         }
-        setShowFireworks(true)
         setSelectedCell(null)
-        setTimeout(() => {
-          setShowFireworks(false)
-          setProgress((prev) => ({
-            ...prev,
-            solvedCellIds: [...prev.solvedCellIds, solvedCellId],
-          }))
-        }, 2800)
+        setRecentlySolved(solvedCellId)
+        setProgress((prev) => ({
+          ...prev,
+          solvedCellIds: [...prev.solvedCellIds, solvedCellId],
+        }))
+        setTimeout(() => setRecentlySolved(null), 1200)
       } else {
         setWrongPick(photoId)
         setHintVisible(true)
@@ -179,12 +176,12 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
 
       <div className="reveal-grid-wrapper" ref={wrapperRef}>
         <div
-          className="reveal-grid"
+          className={`reveal-grid ${allSolved ? 'all-solved' : ''}`}
           style={{
             width: gridSize,
             height: gridSize,
-            gap,
-            padding: gap,
+            gap: allSolved ? 0 : gap,
+            padding: allSolved ? 0 : gap,
           }}
         >
           {shuffledCells.map((cell, index) => {
@@ -192,23 +189,27 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
             const col = index % 3
             const solved = progress.solvedCellIds.includes(cell.id)
             const complete = isCellComplete(cell, puzzle.photos)
+            const isRecent = recentlySolved === cell.id
 
+            const innerSize = allSolved ? gridSize / 3 : cellSize
             const prizeSliceStyle = hasPrize
               ? {
                   backgroundImage: `url(${puzzle.prizeImageUrl})`,
-                  backgroundSize: `${gridSize - gap * 2}px ${gridSize - gap * 2}px`,
-                  backgroundPosition: `-${col * (cellSize + gap)}px -${row * (cellSize + gap)}px`,
+                  backgroundSize: `${allSolved ? gridSize : gridSize - gap * 2}px ${allSolved ? gridSize : gridSize - gap * 2}px`,
+                  backgroundPosition: allSolved
+                    ? `-${col * innerSize}px -${row * innerSize}px`
+                    : `-${col * (cellSize + gap)}px -${row * (cellSize + gap)}px`,
                 }
               : undefined
 
             return (
               <button
                 key={cell.id}
-                className={`reveal-tile ${solved ? 'revealed' : ''} ${!complete ? 'incomplete' : ''}`}
+                className={`reveal-tile ${solved ? 'revealed' : ''} ${!complete ? 'incomplete' : ''} ${isRecent ? 'recently-solved' : ''}`}
                 onClick={() => handleCellClick(cell)}
                 disabled={!complete && !solved}
                 data-testid={`puzzle-cell-${index}`}
-                style={{ width: cellSize, height: cellSize }}
+                style={{ width: innerSize, height: innerSize }}
               >
                 {hasPrize && (
                   <div
@@ -255,7 +256,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         </div>
       )}
 
-      {selectedCell && !showFireworks && (
+      {selectedCell && (
         <div className="overlay" data-testid="overlay">
           <div className="overlay-content">
             <button className="overlay-close" onClick={handleCloseOverlay} data-testid="overlay-close">✕</button>
@@ -290,11 +291,6 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         </div>
       )}
 
-      <Fireworks
-        active={showFireworks}
-        duration={2500}
-        onComplete={() => setShowFireworks(false)}
-      />
     </div>
   )
 }
