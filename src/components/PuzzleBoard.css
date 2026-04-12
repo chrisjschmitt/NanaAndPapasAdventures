@@ -102,12 +102,22 @@
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.8s ease;
   background-repeat: no-repeat;
 }
 
-.tile-prize-slice.visible {
+.reveal-tile.revealed .tile-prize-slice {
   opacity: 1;
+}
+
+/* Cover: fades out when tile is solved */
+.tile-cover {
+  transition: opacity 0.6s ease;
+}
+
+.reveal-tile.revealed .tile-cover {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Opaque cover over each unsolved tile */
