@@ -277,7 +277,6 @@ function PuzzleEditor({
   const soundFileRef = useRef<HTMLInputElement>(null)
 
   function addCell() {
-    if (drafts.length >= 9) { toast('error', 'Maximum 9 cells for a 3×3 grid.'); return }
     setDrafts((prev) => [...prev, {
       id: generateId(), clue: '', hint: '', photo: null,
       pendingFile: null, pendingPreview: '',
@@ -550,10 +549,8 @@ function PuzzleEditor({
 
       <div className="editor-section">
         <div className="cells-header">
-          <h3>🧩 Puzzle Cells ({drafts.length}/9)</h3>
-          {drafts.length < 9 && (
-            <button className="add-cell-btn" onClick={addCell}>+ Add Cell</button>
-          )}
+          <h3>🧩 Puzzle Cells ({drafts.length})</h3>
+          <button className="add-cell-btn" onClick={addCell}>+ Add Cell</button>
         </div>
         <p className="editor-hint">
           Each cell needs a photo, a clue, and a hint. You can save at any time and come back to finish later.
