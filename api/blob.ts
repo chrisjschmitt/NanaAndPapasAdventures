@@ -26,6 +26,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('ETag', result.blob.etag)
     res.setHeader('Cache-Control', 'private, no-cache')
+    res.setHeader('Accept-Ranges', 'none')
+
+    if (result.blob.size) {
+      res.setHeader('Content-Length', result.blob.size)
+    }
+
     // @ts-expect-error ReadableStream is compatible with web stream
     Readable.fromWeb(result.stream).pipe(res)
   } catch {
