@@ -154,6 +154,10 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const gap = 4
   const cellSize = Math.floor((gridSize - gap * 4) / 3)
   const hasPrize = !!puzzle.prizeImageUrl
+  const tappedPhotoCell = useMemo(
+    () => (tappedPhoto ? puzzle.cells.find((cell) => cell.correctPhotoId === tappedPhoto.id) : undefined),
+    [puzzle.cells, tappedPhoto]
+  )
 
   return (
     <div className="reveal-board">
@@ -285,6 +289,11 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
           <div className="photo-zoom-content" onClick={(e) => e.stopPropagation()}>
             <img src={tappedPhoto.url} alt={tappedPhoto.label} />
             <p className="photo-zoom-label">{tappedPhoto.label}</p>
+            {tappedPhotoCell?.funFact?.trim() && (
+              <p className="photo-zoom-fun-fact" data-testid="fun-fact">
+                ⭐ {tappedPhotoCell.funFact}
+              </p>
+            )}
             <button className="photo-zoom-close" onClick={() => setTappedPhoto(null)}>✕ Close</button>
           </div>
         </div>

@@ -144,6 +144,12 @@
 }
 .editor-input:focus { outline: 2px solid var(--accent, #aa3bff); outline-offset: -1px; }
 
+.editor-textarea {
+  min-height: 70px;
+  resize: vertical;
+  font-family: inherit;
+}
+
 .cells-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .cells-header h3 { margin: 0; }
 

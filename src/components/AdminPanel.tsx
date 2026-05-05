@@ -28,6 +28,7 @@ interface CellDraft {
   id: string
   clue: string
   hint: string
+  funFact: string
   photo: Photo | null
   pendingFile: File | null
   pendingPreview: string
@@ -245,7 +246,7 @@ function puzzleToDrafts(puzzle: Puzzle): CellDraft[] {
   return puzzle.cells.map((cell) => {
     const photo = puzzle.photos.find((p) => p.id === cell.correctPhotoId) ?? null
     return {
-      id: cell.id, clue: cell.clue, hint: cell.hint, photo,
+      id: cell.id, clue: cell.clue, hint: cell.hint, funFact: cell.funFact || '', photo,
       pendingFile: null, pendingPreview: '',
       soundUrl: cell.soundUrl || '', soundPathname: cell.soundPathname || '',
       pendingSoundFile: null, pendingSoundName: '',
@@ -278,7 +279,7 @@ function PuzzleEditor({
 
   function addCell() {
     setDrafts((prev) => [...prev, {
-      id: generateId(), clue: '', hint: '', photo: null,
+      id: generateId(), clue: '', hint: '', funFact: '', photo: null,
       pendingFile: null, pendingPreview: '',
       soundUrl: '', soundPathname: '', pendingSoundFile: null, pendingSoundName: '',
     }])
@@ -291,7 +292,7 @@ function PuzzleEditor({
     })
   }
 
-  function updateDraft(index: number, field: 'clue' | 'hint', value: string) {
+  function updateDraft(index: number, field: 'clue' | 'hint' | 'funFact', value: string) {
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, [field]: value } : d)))
   }
 
@@ -336,7 +337,7 @@ function PuzzleEditor({
 
     const filesToUpload = drafts.filter((d) => d.pendingFile).length
     const completeCount = drafts.filter((d) =>
-      (d.photo?.url || d.pendingFile) && d.clue.trim() && d.hint.trim()
+      (d.photo?.url || d.pendingFile) && d.clue.trim() && d.hint.trim() && d.funFact.trim()
     ).length
 
     setSaving(true)
@@ -368,7 +369,7 @@ function PuzzleEditor({
 
         photos.push(photo)
         cells.push({
-          id: d.id, clue: d.clue, hint: d.hint, correctPhotoId: photo.id,
+          id: d.id, clue: d.clue, hint: d.hint, funFact: d.funFact.trim() || undefined, correctPhotoId: photo.id,
           soundUrl: cellSoundUrl || undefined,
           soundPathname: cellSoundPathname || undefined,
         })
@@ -553,13 +554,13 @@ function PuzzleEditor({
           <button className="add-cell-btn" onClick={addCell}>+ Add Cell</button>
         </div>
         <p className="editor-hint">
-          Each cell needs a photo, a clue, and a hint. You can save at any time and come back to finish later.
+          Each cell needs a photo, a clue, a hint, and a fun fact. You can save at any time and come back to finish later.
         </p>
 
         <div className="cells-list">
           {drafts.map((draft, index) => {
             const hasPhoto = !!(draft.pendingFile || draft.photo?.url)
-            const isComplete = hasPhoto && draft.clue.trim() && draft.hint.trim()
+            const isComplete = hasPhoto && draft.clue.trim() && draft.hint.trim() && draft.funFact.trim()
             return (
             <div key={draft.id} className={`cell-editor ${isComplete ? 'cell-complete' : ''}`}>
               <div className="cell-editor-header">
@@ -630,6 +631,13 @@ function PuzzleEditor({
                     onChange={(e) => updateDraft(index, 'hint', e.target.value)}
                     placeholder="Hint — shown on wrong answer"
                     className="editor-input"
+                  />
+                  <textarea
+                    value={draft.funFact}
+                    onChange={(e) => updateDraft(index, 'funFact', e.target.value)}
+                    placeholder="Fun Fact — shown after the child solves this image"
+                    className="editor-input editor-textarea"
+                    rows={2}
                   />
                   <div className="cell-sound-row">
                     {draft.soundUrl && !draft.pendingSoundFile ? (

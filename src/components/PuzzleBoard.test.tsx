@@ -8,15 +8,15 @@ const testPuzzle: Puzzle = {
   id: 'test-puzzle',
   name: 'Test Puzzle',
   cells: [
-    { id: 'c1', clue: 'Find the cat', hint: 'It meows!', correctPhotoId: 'p1' },
-    { id: 'c2', clue: 'Find the dog', hint: 'It barks!', correctPhotoId: 'p2' },
-    { id: 'c3', clue: 'Find the bird', hint: 'It flies!', correctPhotoId: 'p3' },
-    { id: 'c4', clue: 'Find the fish', hint: 'It swims!', correctPhotoId: 'p4' },
-    { id: 'c5', clue: 'Find the horse', hint: 'It gallops!', correctPhotoId: 'p5' },
-    { id: 'c6', clue: 'Find the cow', hint: 'It moos!', correctPhotoId: 'p6' },
-    { id: 'c7', clue: 'Find the pig', hint: 'It oinks!', correctPhotoId: 'p7' },
-    { id: 'c8', clue: 'Find the duck', hint: 'It quacks!', correctPhotoId: 'p8' },
-    { id: 'c9', clue: 'Find the sheep', hint: 'It baas!', correctPhotoId: 'p9' },
+    { id: 'c1', clue: 'Find the cat', hint: 'It meows!', funFact: 'Cats can rotate their ears toward sounds.', correctPhotoId: 'p1' },
+    { id: 'c2', clue: 'Find the dog', hint: 'It barks!', funFact: 'Dogs have a very strong sense of smell.', correctPhotoId: 'p2' },
+    { id: 'c3', clue: 'Find the bird', hint: 'It flies!', funFact: 'Bird feathers help with flying and staying warm.', correctPhotoId: 'p3' },
+    { id: 'c4', clue: 'Find the fish', hint: 'It swims!', funFact: 'Fish use gills to breathe underwater.', correctPhotoId: 'p4' },
+    { id: 'c5', clue: 'Find the horse', hint: 'It gallops!', funFact: 'Horses can sleep standing up.', correctPhotoId: 'p5' },
+    { id: 'c6', clue: 'Find the cow', hint: 'It moos!', funFact: 'Cows have best friends in their herds.', correctPhotoId: 'p6' },
+    { id: 'c7', clue: 'Find the pig', hint: 'It oinks!', funFact: 'Pigs are very smart animals.', correctPhotoId: 'p7' },
+    { id: 'c8', clue: 'Find the duck', hint: 'It quacks!', funFact: 'Duck feathers shed water like a raincoat.', correctPhotoId: 'p8' },
+    { id: 'c9', clue: 'Find the sheep', hint: 'It baas!', funFact: 'Sheep grow wool that can be made into clothes.', correctPhotoId: 'p9' },
   ],
   photos: [
     { id: 'p1', url: 'cat.jpg', pathname: '', label: 'Cat' },
@@ -40,7 +40,7 @@ beforeEach(() => {
 function getFirstUnsolvedCell(): HTMLElement {
   for (let i = 0; i < 9; i++) {
     const el = screen.getByTestId(`puzzle-cell-${i}`)
-    if (!el.classList.contains('solved') && !el.hasAttribute('disabled')) return el
+    if (!el.classList.contains('revealed') && !el.hasAttribute('disabled')) return el
   }
   throw new Error('No unsolved cell found')
 }
@@ -68,6 +68,26 @@ describe('PuzzleBoard', () => {
     expect(screen.getByTestId('overlay')).toBeInTheDocument()
     const overlay = screen.getByTestId('overlay')
     expect(within(overlay).getByText(/Find the/)).toBeInTheDocument()
+  })
+
+  it('shows the fun fact after a solved image is tapped', async () => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    render(<PuzzleBoard puzzle={testPuzzle} />)
+
+    const cellButton = getFirstUnsolvedCell()
+    await user.click(cellButton)
+    const overlay = screen.getByTestId('overlay')
+    const clueText = within(overlay).getByText(/Find the/).textContent || ''
+    const correctAnimal = clueText.replace('Find the ', '').toLowerCase()
+    const correctPhotoId = testPuzzle.photos.find(
+      (p) => p.label.toLowerCase() === correctAnimal
+    )!.id
+
+    await user.click(screen.getByTestId(`photo-${correctPhotoId}`))
+    await user.click(cellButton)
+
+    expect(screen.getByTestId('fun-fact')).toHaveTextContent(/Fun Fact:/)
   })
 
   it('shows hint on wrong answer', async () => {
