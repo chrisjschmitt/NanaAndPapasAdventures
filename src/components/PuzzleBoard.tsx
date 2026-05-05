@@ -291,7 +291,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
             <p className="photo-zoom-label">{tappedPhoto.label}</p>
             {tappedPhotoCell?.funFact?.trim() && (
               <p className="photo-zoom-fun-fact" data-testid="fun-fact">
-                ⭐ {tappedPhotoCell.funFact}
+                <strong>⭐ Fun Fact:</strong> {tappedPhotoCell.funFact}
               </p>
             )}
             <button className="photo-zoom-close" onClick={() => setTappedPhoto(null)}>✕ Close</button>
