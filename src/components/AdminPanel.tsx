@@ -96,6 +96,38 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
     setPuzzles([])
   }
 
+  async function handleImportCsv(file: File) {
+    try {
+      const text = await file.text()
+      const rows = parseCsv(text)
+      if (rows.length === 0) {
+        toast('error', 'CSV is empty or has no valid rows.')
+        return
+      }
+      const puzzleName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
+      const puzzle: Puzzle = {
+        id: generateId(),
+        name: puzzleName,
+        cells: rows.map((row) => ({
+          id: generateId(),
+          clue: row.clue,
+          hint: row.hint,
+          funFact: row.funFact || undefined,
+          correctPhotoId: generateId(),
+        })),
+        photos: [],
+        createdAt: new Date().toISOString(),
+      }
+      await createPuzzle(puzzle)
+      setPuzzles((prev) => [...prev, puzzle])
+      setEditingPuzzleId(puzzle.id)
+      toast('success', `Imported "${puzzleName}" with ${rows.length} cells. Add photos to complete it.`)
+      onPuzzlesChanged()
+    } catch {
+      toast('error', 'Failed to import CSV.')
+    }
+  }
+
   async function handleCreatePuzzle() {
     const puzzle: Puzzle = {
       id: generateId(),
@@ -190,6 +222,7 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
         <PuzzleListView
           puzzles={puzzles}
           onCreate={handleCreatePuzzle}
+          onImportCsv={handleImportCsv}
           onEdit={(id) => setEditingPuzzleId(id)}
           onDelete={handleDeletePuzzle}
         />
@@ -206,36 +239,113 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
   )
 }
 
+function parseCsv(text: string): { clue: string; hint: string; funFact: string }[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim())
+  const rows: { clue: string; hint: string; funFact: string }[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const fields = parseCsvLine(lines[i])
+    if (i === 0 && fields[0]?.toLowerCase().replace(/[^a-z]/g, '') === 'clue') continue
+    if (fields.length < 2) continue
+    rows.push({
+      clue: fields[0]?.trim() || '',
+      hint: fields[1]?.trim() || '',
+      funFact: fields[2]?.trim() || '',
+    })
+  }
+  return rows
+}
+
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++ }
+      else if (ch === '"') { inQuotes = false }
+      else { current += ch }
+    } else {
+      if (ch === '"') { inQuotes = true }
+      else if (ch === ',') { fields.push(current); current = '' }
+      else { current += ch }
+    }
+  }
+  fields.push(current)
+  return fields
+}
+
+function countReady(puzzle: Puzzle): number {
+  return puzzle.cells.filter((c) => {
+    const photo = puzzle.photos.find((p) => p.id === c.correctPhotoId)
+    return c.clue.trim() && c.hint.trim() && photo?.url
+  }).length
+}
+
 function PuzzleListView({
-  puzzles, onCreate, onEdit, onDelete,
+  puzzles, onCreate, onImportCsv, onEdit, onDelete,
 }: {
   puzzles: Puzzle[]
   onCreate: () => void
+  onImportCsv: (file: File) => void
   onEdit: (id: string) => void
   onDelete: (id: string, name: string) => void
 }) {
+  const csvRef = useRef<HTMLInputElement>(null)
+
   return (
     <div className="puzzle-list-admin">
       <div className="puzzle-list-header">
         <h2>Puzzles ({puzzles.length})</h2>
-        <button className="create-btn" onClick={onCreate} data-testid="create-puzzle">+ New Puzzle</button>
+        <div className="puzzle-list-actions">
+          <label className="import-btn">
+            📄 Import CSV
+            <input
+              ref={csvRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) onImportCsv(file)
+                e.target.value = ''
+              }}
+              style={{ display: 'none' }}
+            />
+          </label>
+          <button className="create-btn" onClick={onCreate} data-testid="create-puzzle">+ New Puzzle</button>
+        </div>
       </div>
+      <p className="editor-hint">
+        CSV format: <code>clue, hint, fun fact</code> (one row per piece, header row optional)
+      </p>
       {puzzles.length === 0 ? (
-        <p className="empty-text">No puzzles yet. Create one!</p>
+        <p className="empty-text">No puzzles yet. Create one or import a CSV!</p>
       ) : (
         <div className="puzzle-admin-cards">
-          {puzzles.map((puzzle) => (
-            <div key={puzzle.id} className="puzzle-admin-card">
-              <div className="pac-info">
-                <h3>{puzzle.name || <em>Untitled</em>}</h3>
-                <p>{puzzle.cells.length}/9 cells · {puzzle.photos.length} photos</p>
+          {puzzles.map((puzzle) => {
+            const ready = countReady(puzzle)
+            const isComplete = ready >= 9 && puzzle.cells.length >= 9
+            return (
+              <div key={puzzle.id} className="puzzle-admin-card">
+                <div className="pac-info">
+                  <h3>
+                    {puzzle.name || <em>Untitled</em>}
+                    {!isComplete && <span className="pac-wip-badge">🚧 Under Construction</span>}
+                  </h3>
+                  <p>
+                    {puzzle.cells.length} cell{puzzle.cells.length !== 1 ? 's' : ''}
+                    {' · '}{ready} with photos
+                    {puzzle.cells.length < 9 && ' · needs at least 9 cells'}
+                  </p>
+                </div>
+                <div className="pac-actions">
+                  <button onClick={() => onEdit(puzzle.id)}>✏️ Edit</button>
+                  <button onClick={() => onDelete(puzzle.id, puzzle.name)}>🗑️ Delete</button>
+                </div>
               </div>
-              <div className="pac-actions">
-                <button onClick={() => onEdit(puzzle.id)}>✏️ Edit</button>
-                <button onClick={() => onDelete(puzzle.id, puzzle.name)}>🗑️ Delete</button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

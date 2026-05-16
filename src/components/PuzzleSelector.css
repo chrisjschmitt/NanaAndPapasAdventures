@@ -47,11 +47,28 @@
   font-size: 2rem;
 }
 
+.puzzle-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .puzzle-card-name {
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-h, #08060d);
-  flex: 1;
+}
+
+.puzzle-card-wip-label {
+  font-size: 0.75rem;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.puzzle-card-wip {
+  border-style: dashed;
+  opacity: 0.8;
 }
 
 .puzzle-card-count {
