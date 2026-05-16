@@ -204,7 +204,22 @@
   align-items: center;
   margin-bottom: 12px;
 }
-.cell-editor-header strong { font-size: 0.95rem; color: var(--text-h, #08060d); }
+.cell-editor-header strong { font-size: 0.95rem; color: var(--text-h, #08060d); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.cell-subject-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e40af;
+  background: #dbeafe;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.recommended-sound-hint {
+  font-size: 0.75rem;
+  color: #92400e;
+  font-style: italic;
+}
 
 .cell-header-actions { display: flex; gap: 4px; align-items: center; }
 
