@@ -26,9 +26,11 @@ interface Toast {
 
 interface CellDraft {
   id: string
+  subject: string
   clue: string
   hint: string
   funFact: string
+  recommendedSound: string
   photo: Photo | null
   pendingFile: File | null
   pendingPreview: string
@@ -110,9 +112,11 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
         name: puzzleName,
         cells: rows.map((row) => ({
           id: generateId(),
+          subject: row.subject || undefined,
           clue: row.clue,
           hint: row.hint,
           funFact: row.funFact || undefined,
+          recommendedSound: row.recommendedSound || undefined,
           correctPhotoId: generateId(),
         })),
         photos: [],
@@ -239,18 +243,29 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
   )
 }
 
-function parseCsv(text: string): { clue: string; hint: string; funFact: string }[] {
+interface CsvRow {
+  subject: string
+  clue: string
+  hint: string
+  funFact: string
+  recommendedSound: string
+}
+
+function parseCsv(text: string): CsvRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim())
-  const rows: { clue: string; hint: string; funFact: string }[] = []
+  const rows: CsvRow[] = []
 
   for (let i = 0; i < lines.length; i++) {
     const fields = parseCsvLine(lines[i])
-    if (i === 0 && fields[0]?.toLowerCase().replace(/[^a-z]/g, '') === 'clue') continue
+    const first = fields[0]?.toLowerCase().replace(/[^a-z]/g, '') || ''
+    if (i === 0 && (first === 'subject' || first === 'clue')) continue
     if (fields.length < 2) continue
     rows.push({
-      clue: fields[0]?.trim() || '',
-      hint: fields[1]?.trim() || '',
-      funFact: fields[2]?.trim() || '',
+      subject: fields[0]?.trim() || '',
+      clue: fields[1]?.trim() || '',
+      hint: fields[2]?.trim() || '',
+      funFact: fields[3]?.trim() || '',
+      recommendedSound: fields[4]?.trim() || '',
     })
   }
   return rows
@@ -317,7 +332,7 @@ function PuzzleListView({
         </div>
       </div>
       <p className="editor-hint">
-        CSV format: <code>clue, hint, fun fact</code> (one row per piece, header row optional)
+        CSV format: <code>subject, clue, hint, fun fact, recommended sound</code> (one row per piece, header row optional)
       </p>
       {puzzles.length === 0 ? (
         <p className="empty-text">No puzzles yet. Create one or import a CSV!</p>
@@ -356,7 +371,8 @@ function puzzleToDrafts(puzzle: Puzzle): CellDraft[] {
   return puzzle.cells.map((cell) => {
     const photo = puzzle.photos.find((p) => p.id === cell.correctPhotoId) ?? null
     return {
-      id: cell.id, clue: cell.clue, hint: cell.hint, funFact: cell.funFact || '', photo,
+      id: cell.id, subject: cell.subject || '', clue: cell.clue, hint: cell.hint,
+      funFact: cell.funFact || '', recommendedSound: cell.recommendedSound || '', photo,
       pendingFile: null, pendingPreview: '',
       soundUrl: cell.soundUrl || '', soundPathname: cell.soundPathname || '',
       pendingSoundFile: null, pendingSoundName: '',
@@ -389,8 +405,8 @@ function PuzzleEditor({
 
   function addCell() {
     setDrafts((prev) => [...prev, {
-      id: generateId(), clue: '', hint: '', funFact: '', photo: null,
-      pendingFile: null, pendingPreview: '',
+      id: generateId(), subject: '', clue: '', hint: '', funFact: '', recommendedSound: '',
+      photo: null, pendingFile: null, pendingPreview: '',
       soundUrl: '', soundPathname: '', pendingSoundFile: null, pendingSoundName: '',
     }])
   }
@@ -402,7 +418,7 @@ function PuzzleEditor({
     })
   }
 
-  function updateDraft(index: number, field: 'clue' | 'hint' | 'funFact', value: string) {
+  function updateDraft(index: number, field: 'subject' | 'clue' | 'hint' | 'funFact' | 'recommendedSound', value: string) {
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, [field]: value } : d)))
   }
 
@@ -479,7 +495,8 @@ function PuzzleEditor({
 
         photos.push(photo)
         cells.push({
-          id: d.id, clue: d.clue, hint: d.hint, funFact: d.funFact || undefined,
+          id: d.id, subject: d.subject || undefined, clue: d.clue, hint: d.hint,
+          funFact: d.funFact || undefined, recommendedSound: d.recommendedSound || undefined,
           correctPhotoId: photo.id,
           soundUrl: cellSoundUrl || undefined,
           soundPathname: cellSoundPathname || undefined,
@@ -675,7 +692,10 @@ function PuzzleEditor({
             return (
             <div key={draft.id} className={`cell-editor ${isComplete ? 'cell-complete' : ''}`}>
               <div className="cell-editor-header">
-                <strong>{isComplete ? '✅' : '⬜'} Cell {index + 1}</strong>
+                <strong>
+                  {isComplete ? '✅' : '⬜'} Cell {index + 1}
+                  {draft.subject && <span className="cell-subject-badge">{draft.subject}</span>}
+                </strong>
                 <div className="cell-header-actions">
                   <button
                     onClick={() => moveCell(index, -1)}
@@ -720,6 +740,13 @@ function PuzzleEditor({
                 </div>
 
                 <div className="cell-fields">
+                  <input
+                    type="text"
+                    value={draft.subject}
+                    onChange={(e) => updateDraft(index, 'subject', e.target.value)}
+                    placeholder="Subject — what this piece is about (admin only)"
+                    className="editor-input"
+                  />
                   {draft.photo && (
                     <input
                       type="text"
@@ -789,6 +816,9 @@ function PuzzleEditor({
                           style={{ display: 'none' }}
                         />
                       </label>
+                    )}
+                    {draft.recommendedSound && !draft.soundUrl && !draft.pendingSoundFile && (
+                      <span className="recommended-sound-hint">💡 Suggested: {draft.recommendedSound}</span>
                     )}
                   </div>
                 </div>

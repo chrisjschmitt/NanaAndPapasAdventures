@@ -7,9 +7,11 @@ export interface Photo {
 
 export interface PuzzleCell {
   id: string
+  subject?: string
   clue: string
   hint: string
   funFact?: string
+  recommendedSound?: string
   correctPhotoId: string
   soundUrl?: string
   soundPathname?: string
