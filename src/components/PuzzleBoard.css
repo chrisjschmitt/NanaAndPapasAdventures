@@ -367,6 +367,69 @@
 
 .photo-zoom-close:hover { background: rgba(255, 255, 255, 0.25); }
 
+/* Fun fact popup */
+.fun-fact-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+.fun-fact-popup {
+  background: linear-gradient(135deg, #ffd166, #f7b731);
+  border-radius: 20px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  animation: popIn 0.4s ease;
+}
+
+.fun-fact-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.fun-fact-popup h3 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+  color: #3d2e00;
+}
+
+.fun-fact-popup p {
+  margin: 0 0 20px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: #5a4400;
+}
+
+.fun-fact-close {
+  background: rgba(0, 0, 0, 0.15);
+  border: none;
+  color: #3d2e00;
+  padding: 10px 28px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fun-fact-close:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
