@@ -9,7 +9,6 @@ export interface PuzzleCell {
   id: string
   clue: string
   hint: string
-  funFact?: string
   correctPhotoId: string
   soundUrl?: string
   soundPathname?: string
