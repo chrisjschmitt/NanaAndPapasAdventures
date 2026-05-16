@@ -9,13 +9,7 @@ interface PuzzleBoardProps {
   onBack?: () => void
 }
 
-function loadProgress(puzzleId: string): GameProgress {
-  try {
-    const saved = localStorage.getItem(`progress-${puzzleId}`)
-    if (saved) return JSON.parse(saved)
-  } catch {
-    /* ignore corrupt data */
-  }
+function freshProgress(puzzleId: string): GameProgress {
   return { puzzleId, solvedCellIds: [] }
 }
 
@@ -56,7 +50,7 @@ const TILE_COLORS = [
 
 export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [progress, setProgress] = useState<GameProgress>(() =>
-    loadProgress(puzzle.id)
+    freshProgress(puzzle.id)
   )
   const [selectedCell, setSelectedCell] = useState<PuzzleCell | null>(null)
   const [hintVisible, setHintVisible] = useState(false)
@@ -79,9 +73,6 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
     [completeCells, progress.solvedCellIds]
   )
 
-  useEffect(() => {
-    localStorage.setItem(`progress-${puzzle.id}`, JSON.stringify(progress))
-  }, [progress, puzzle.id])
 
   useEffect(() => {
     function updateSize() {
@@ -150,10 +141,9 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   }, [])
 
   const handleRestart = useCallback(() => {
-    setProgress({ puzzleId: puzzle.id, solvedCellIds: [] })
+    setProgress(freshProgress(puzzle.id))
     setHasGuessed(false)
     setRound(pickRound(puzzle.cells, puzzle.photos))
-    localStorage.removeItem(`progress-${puzzle.id}`)
   }, [puzzle.id, puzzle.cells, puzzle.photos])
 
   const gap = 4
