@@ -28,6 +28,7 @@ interface CellDraft {
   id: string
   clue: string
   hint: string
+  funFact: string
   photo: Photo | null
   pendingFile: File | null
   pendingPreview: string
@@ -245,7 +246,7 @@ function puzzleToDrafts(puzzle: Puzzle): CellDraft[] {
   return puzzle.cells.map((cell) => {
     const photo = puzzle.photos.find((p) => p.id === cell.correctPhotoId) ?? null
     return {
-      id: cell.id, clue: cell.clue, hint: cell.hint, photo,
+      id: cell.id, clue: cell.clue, hint: cell.hint, funFact: cell.funFact || '', photo,
       pendingFile: null, pendingPreview: '',
       soundUrl: cell.soundUrl || '', soundPathname: cell.soundPathname || '',
       pendingSoundFile: null, pendingSoundName: '',
@@ -278,7 +279,7 @@ function PuzzleEditor({
 
   function addCell() {
     setDrafts((prev) => [...prev, {
-      id: generateId(), clue: '', hint: '', photo: null,
+      id: generateId(), clue: '', hint: '', funFact: '', photo: null,
       pendingFile: null, pendingPreview: '',
       soundUrl: '', soundPathname: '', pendingSoundFile: null, pendingSoundName: '',
     }])
@@ -291,7 +292,7 @@ function PuzzleEditor({
     })
   }
 
-  function updateDraft(index: number, field: 'clue' | 'hint', value: string) {
+  function updateDraft(index: number, field: 'clue' | 'hint' | 'funFact', value: string) {
     setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, [field]: value } : d)))
   }
 
@@ -368,7 +369,8 @@ function PuzzleEditor({
 
         photos.push(photo)
         cells.push({
-          id: d.id, clue: d.clue, hint: d.hint, correctPhotoId: photo.id,
+          id: d.id, clue: d.clue, hint: d.hint, funFact: d.funFact || undefined,
+          correctPhotoId: photo.id,
           soundUrl: cellSoundUrl || undefined,
           soundPathname: cellSoundPathname || undefined,
         })
@@ -629,6 +631,13 @@ function PuzzleEditor({
                     value={draft.hint}
                     onChange={(e) => updateDraft(index, 'hint', e.target.value)}
                     placeholder="Hint — shown on wrong answer"
+                    className="editor-input"
+                  />
+                  <input
+                    type="text"
+                    value={draft.funFact}
+                    onChange={(e) => updateDraft(index, 'funFact', e.target.value)}
+                    placeholder="Fun Fact — shown after correct answer (optional)"
                     className="editor-input"
                   />
                   <div className="cell-sound-row">

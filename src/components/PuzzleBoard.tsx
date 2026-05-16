@@ -64,6 +64,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   const [wrongPick, setWrongPick] = useState<string | null>(null)
   const [hasGuessed, setHasGuessed] = useState(false)
   const [tappedPhoto, setTappedPhoto] = useState<Photo | null>(null)
+  const [funFactText, setFunFactText] = useState<string | null>(null)
   const [gridSize, setGridSize] = useState(300)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
@@ -123,6 +124,7 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
         } else {
           playFireworksSound(2500)
         }
+        const fact = selectedCell.funFact
         setSelectedCell(null)
         setRecentlySolved(solvedCellId)
         setProgress((prev) => ({
@@ -130,6 +132,9 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
           solvedCellIds: [...prev.solvedCellIds, solvedCellId],
         }))
         setTimeout(() => setRecentlySolved(null), 1200)
+        if (fact) {
+          setTimeout(() => setFunFactText(fact), 800)
+        }
       } else {
         setWrongPick(photoId)
         setHintVisible(true)
@@ -286,6 +291,17 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
             <img src={tappedPhoto.url} alt={tappedPhoto.label} />
             <p className="photo-zoom-label">{tappedPhoto.label}</p>
             <button className="photo-zoom-close" onClick={() => setTappedPhoto(null)}>✕ Close</button>
+          </div>
+        </div>
+      )}
+
+      {funFactText && (
+        <div className="fun-fact-overlay" onClick={() => setFunFactText(null)}>
+          <div className="fun-fact-popup" onClick={(e) => e.stopPropagation()}>
+            <span className="fun-fact-icon">🧠</span>
+            <h3>Fun Fact!</h3>
+            <p>{funFactText}</p>
+            <button className="fun-fact-close" onClick={() => setFunFactText(null)}>Got it!</button>
           </div>
         </div>
       )}
