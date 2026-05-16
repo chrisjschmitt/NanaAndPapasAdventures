@@ -7,6 +7,13 @@ interface PuzzleSelectorProps {
   onAdmin: () => void
 }
 
+function countReady(puzzle: Puzzle): number {
+  return puzzle.cells.filter((c) => {
+    const photo = puzzle.photos.find((p) => p.id === c.correctPhotoId)
+    return c.clue.trim() && c.hint.trim() && photo?.url
+  }).length
+}
+
 export default function PuzzleSelector({
   puzzles,
   onSelect,
@@ -21,21 +28,24 @@ export default function PuzzleSelector({
 
       <div className="puzzle-list">
         {puzzles.map((puzzle) => {
-          const complete = puzzle.cells.filter((c) => {
-            const photo = puzzle.photos.find((p) => p.id === c.correctPhotoId)
-            return c.clue.trim() && c.hint.trim() && photo?.url
-          }).length
+          const ready = countReady(puzzle)
+          const isComplete = ready >= 9 && puzzle.cells.length >= 9
           return (
             <button
               key={puzzle.id}
-              className="puzzle-card"
+              className={`puzzle-card ${!isComplete ? 'puzzle-card-wip' : ''}`}
               onClick={() => onSelect(puzzle)}
               data-testid={`puzzle-${puzzle.id}`}
             >
-              <span className="puzzle-card-icon">🧩</span>
-              <span className="puzzle-card-name">{puzzle.name || 'Untitled'}</span>
+              <span className="puzzle-card-icon">{isComplete ? '🧩' : '🚧'}</span>
+              <div className="puzzle-card-text">
+                <span className="puzzle-card-name">{puzzle.name || 'Untitled'}</span>
+                {!isComplete && (
+                  <span className="puzzle-card-wip-label">Under Construction</span>
+                )}
+              </div>
               <span className="puzzle-card-count">
-                {complete} piece{complete !== 1 ? 's' : ''} ready
+                {ready} piece{ready !== 1 ? 's' : ''} ready
               </span>
             </button>
           )
