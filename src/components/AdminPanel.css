@@ -116,6 +116,30 @@
 }
 .import-btn:hover { background: #e8e5dd; }
 
+.select-all-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: var(--text, #6b6375);
+  cursor: pointer;
+}
+
+.pac-checkbox {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.pac-checkbox input { width: 18px; height: 18px; cursor: pointer; }
+
+.puzzle-admin-card.pac-selected {
+  border-color: var(--accent, #aa3bff);
+  background: rgba(170, 59, 255, 0.04);
+}
+
 .pac-info h3 { margin: 0 0 4px; font-size: 1.05rem; color: var(--text-h, #08060d); }
 
 .pac-wip-badge {

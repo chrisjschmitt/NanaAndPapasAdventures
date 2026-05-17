@@ -298,6 +298,43 @@ function countReady(puzzle: Puzzle): number {
   }).length
 }
 
+function escapeCsvField(value: string): string {
+  if (!value) return ''
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
+}
+
+function exportPuzzlesToCsv(puzzles: Puzzle[]) {
+  const lines = ['subject,clue,hint,fun fact,recommended sound']
+  for (const puzzle of puzzles) {
+    if (puzzles.length > 1) {
+      lines.push('')
+      lines.push(`# ${puzzle.name || 'Untitled'}`)
+    }
+    for (const cell of puzzle.cells) {
+      lines.push([
+        escapeCsvField(cell.subject || ''),
+        escapeCsvField(cell.clue),
+        escapeCsvField(cell.hint),
+        escapeCsvField(cell.funFact || ''),
+        escapeCsvField(cell.recommendedSound || ''),
+      ].join(','))
+    }
+  }
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const name = puzzles.length === 1
+    ? (puzzles[0].name || 'puzzle').replace(/[^a-zA-Z0-9 ]/g, '').replace(/ +/g, '-').toLowerCase()
+    : 'puzzles-export'
+  a.href = url
+  a.download = `${name}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function PuzzleListView({
   puzzles, onCreate, onImportCsv, onEdit, onDelete,
 }: {
@@ -308,12 +345,38 @@ function PuzzleListView({
   onDelete: (id: string, name: string) => void
 }) {
   const csvRef = useRef<HTMLInputElement>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (selected.size === puzzles.length) setSelected(new Set())
+    else setSelected(new Set(puzzles.map((p) => p.id)))
+  }
+
+  function handleExport() {
+    const toExport = puzzles.filter((p) => selected.has(p.id))
+    if (toExport.length === 0) return
+    exportPuzzlesToCsv(toExport)
+  }
 
   return (
     <div className="puzzle-list-admin">
       <div className="puzzle-list-header">
         <h2>Puzzles ({puzzles.length})</h2>
         <div className="puzzle-list-actions">
+          {selected.size > 0 && (
+            <button className="import-btn" onClick={handleExport}>
+              📥 Export {selected.size} as CSV
+            </button>
+          )}
           <label className="import-btn">
             📄 Import CSV
             <input
@@ -337,31 +400,50 @@ function PuzzleListView({
       {puzzles.length === 0 ? (
         <p className="empty-text">No puzzles yet. Create one or import a CSV!</p>
       ) : (
-        <div className="puzzle-admin-cards">
-          {puzzles.map((puzzle) => {
-            const ready = countReady(puzzle)
-            const isComplete = ready >= 9 && puzzle.cells.length >= 9
-            return (
-              <div key={puzzle.id} className="puzzle-admin-card">
-                <div className="pac-info">
-                  <h3>
-                    {puzzle.name || <em>Untitled</em>}
-                    {!isComplete && <span className="pac-wip-badge">🚧 Under Construction</span>}
-                  </h3>
-                  <p>
-                    {puzzle.cells.length} cell{puzzle.cells.length !== 1 ? 's' : ''}
-                    {' · '}{ready} with photos
-                    {puzzle.cells.length < 9 && ' · needs at least 9 cells'}
-                  </p>
+        <>
+          {puzzles.length > 1 && (
+            <label className="select-all-row">
+              <input
+                type="checkbox"
+                checked={selected.size === puzzles.length}
+                onChange={toggleAll}
+              />
+              <span>Select all</span>
+            </label>
+          )}
+          <div className="puzzle-admin-cards">
+            {puzzles.map((puzzle) => {
+              const ready = countReady(puzzle)
+              const isComplete = ready >= 9 && puzzle.cells.length >= 9
+              return (
+                <div key={puzzle.id} className={`puzzle-admin-card ${selected.has(puzzle.id) ? 'pac-selected' : ''}`}>
+                  <label className="pac-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(puzzle.id)}
+                      onChange={() => toggleSelect(puzzle.id)}
+                    />
+                  </label>
+                  <div className="pac-info">
+                    <h3>
+                      {puzzle.name || <em>Untitled</em>}
+                      {!isComplete && <span className="pac-wip-badge">🚧 Under Construction</span>}
+                    </h3>
+                    <p>
+                      {puzzle.cells.length} cell{puzzle.cells.length !== 1 ? 's' : ''}
+                      {' · '}{ready} with photos
+                      {puzzle.cells.length < 9 && ' · needs at least 9 cells'}
+                    </p>
+                  </div>
+                  <div className="pac-actions">
+                    <button onClick={() => onEdit(puzzle.id)}>✏️ Edit</button>
+                    <button onClick={() => onDelete(puzzle.id, puzzle.name)}>🗑️ Delete</button>
+                  </div>
                 </div>
-                <div className="pac-actions">
-                  <button onClick={() => onEdit(puzzle.id)}>✏️ Edit</button>
-                  <button onClick={() => onDelete(puzzle.id, puzzle.name)}>🗑️ Delete</button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )
