@@ -229,6 +229,7 @@ export default function AdminPanel({ onBack, onPuzzlesChanged }: AdminPanelProps
           onImportCsv={handleImportCsv}
           onEdit={(id) => setEditingPuzzleId(id)}
           onDelete={handleDeletePuzzle}
+          toast={toast}
         />
       )}
 
@@ -336,13 +337,14 @@ function exportPuzzlesToCsv(puzzles: Puzzle[]) {
 }
 
 function PuzzleListView({
-  puzzles, onCreate, onImportCsv, onEdit, onDelete,
+  puzzles, onCreate, onImportCsv, onEdit, onDelete, toast,
 }: {
   puzzles: Puzzle[]
   onCreate: () => void
   onImportCsv: (file: File) => void
   onEdit: (id: string) => void
   onDelete: (id: string, name: string) => void
+  toast: (type: 'success' | 'error', text: string) => void
 }) {
   const csvRef = useRef<HTMLInputElement>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -436,6 +438,13 @@ function PuzzleListView({
                     </p>
                   </div>
                   <div className="pac-actions">
+                    <button onClick={() => {
+                      const url = `${window.location.origin}/play/${encodeURIComponent(puzzle.id)}`
+                      navigator.clipboard.writeText(url).then(
+                        () => toast('success', 'Link copied!'),
+                        () => toast('error', 'Failed to copy link.')
+                      )
+                    }}>📋 Link</button>
                     <button onClick={() => onEdit(puzzle.id)}>✏️ Edit</button>
                     <button onClick={() => onDelete(puzzle.id, puzzle.name)}>🗑️ Delete</button>
                   </div>
