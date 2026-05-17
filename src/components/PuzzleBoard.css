@@ -69,12 +69,13 @@
 
 /* The grid itself: sized in JS to be a perfect square */
 .reveal-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
   background: #0d0d1a;
   border-radius: 8px;
   overflow: hidden;
-  box-sizing: content-box;
+  box-sizing: border-box;
   transition: gap 0.4s ease, padding 0.4s ease, border-radius 0.4s ease;
 }
 
@@ -83,7 +84,7 @@
   border-radius: 4px;
 }
 
-/* Each tile: sized in JS to be a perfect square */
+/* Each tile */
 .reveal-tile {
   position: relative;
   border: none;
@@ -93,6 +94,8 @@
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   transition: border-radius 0.4s ease, box-shadow 0.4s ease;
+  aspect-ratio: 1;
+  width: 100%;
 }
 
 .all-solved .reveal-tile {
