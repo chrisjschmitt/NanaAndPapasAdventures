@@ -147,8 +147,9 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
   }, [puzzle.id, puzzle.cells, puzzle.photos])
 
   const gap = 4
-  const cellSize = Math.floor((gridSize - gap * 4) / 3)
   const hasPrize = !!puzzle.prizeImageUrl
+  const innerGridSize = gridSize - gap * 2
+  const cellSpan = innerGridSize / 3
 
   return (
     <div className="reveal-board">
@@ -185,15 +186,18 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
             const complete = isCellComplete(cell, round.photos)
             const isRecent = recentlySolved === cell.id
 
-            const innerSize = allSolved ? gridSize / 3 : cellSize
             const prizeSliceStyle = hasPrize
-              ? {
-                  backgroundImage: `url(${puzzle.prizeImageUrl})`,
-                  backgroundSize: `${allSolved ? gridSize : gridSize - gap * 2}px ${allSolved ? gridSize : gridSize - gap * 2}px`,
-                  backgroundPosition: allSolved
-                    ? `-${col * innerSize}px -${row * innerSize}px`
-                    : `-${col * (cellSize + gap)}px -${row * (cellSize + gap)}px`,
-                }
+              ? allSolved
+                ? {
+                    backgroundImage: `url(${puzzle.prizeImageUrl})`,
+                    backgroundSize: `${gridSize}px ${gridSize}px`,
+                    backgroundPosition: `-${col * (gridSize / 3)}px -${row * (gridSize / 3)}px`,
+                  }
+                : {
+                    backgroundImage: `url(${puzzle.prizeImageUrl})`,
+                    backgroundSize: `${innerGridSize}px ${innerGridSize}px`,
+                    backgroundPosition: `-${col * cellSpan}px -${row * cellSpan}px`,
+                  }
               : undefined
 
             return (
@@ -203,7 +207,6 @@ export default function PuzzleBoard({ puzzle, onBack }: PuzzleBoardProps) {
                 onClick={() => handleCellClick(cell)}
                 disabled={!complete && !solved}
                 data-testid={`puzzle-cell-${index}`}
-                style={{ width: innerSize, height: innerSize }}
               >
                 {hasPrize && (
                   <div
