@@ -1,47 +1,85 @@
 # Nana & Papa's Adventures
 
-A puzzle game for children where kids solve clue-based jigsaw puzzles by matching photos to riddles. Built with React, TypeScript, and Vite.
+A puzzle game for children where kids match photos to clues and hints, revealing a hidden prize image as they solve each piece. Built with React, TypeScript, and Vite, deployed on Vercel.
 
 ## How It Works
 
-The game presents a **3×3 jigsaw puzzle board** with interlocking pieces. Each piece hides a clue — tap a piece to reveal it, then pick the matching photo from a grid of 9 choices. Get it right and fireworks light up the screen (with sound!). Get it wrong and you'll get a helpful hint to try again.
+The game presents a **3×3 board of colorful tiles** covering a hidden prize image. Each tile hides a clue — tap a tile to reveal it, then pick the matching photo from a grid of choices. Get it right and the tile fades away to reveal a piece of the prize image underneath (with a celebration sound!). Get it wrong and you'll get a helpful hint. After solving all 9 pieces, the full prize image is revealed seamlessly.
+
+### Key Gameplay Features
+
+- **Reveal board** — colorful gradient tiles cover a prize image like a scratch-off card
+- **Clues, hints, and fun facts** — each piece has a clue (shown to the child), a hint (shown on wrong answer), and an optional fun fact (shown after correct answer)
+- **Prize image** — revealed piece by piece as tiles are solved; dimmed initially, full brightness when complete with gaps removed for a seamless photo
+- **Photo zoom** — tap the 🔍 button on any answer photo to see it full-size before choosing
+- **Tap to explore** — after solving a piece, tap it to see the individual photo for that cell
+- **Randomized rounds** — each game randomly picks up to 9 cells from the puzzle's full pool, and shuffles both tile order and photo grid order
+- **Custom sounds** — optional WAV file per puzzle (default celebration) or per cell, with synthesized fireworks as the fallback
+- **Replay** — button appears after the first guess; re-shuffles cells and photos for a fresh round
+- **Shareable links** — each puzzle has a direct URL (`/play/{puzzleId}`) that can be sent to anyone
 
 ### Included Puzzle: Cruise Ship Adventure
 
-The app ships with a ready-to-play cruise-themed puzzle featuring 9 items you'd find on a cruise ship:
-
-| Piece | Clue | Answer |
-|-------|------|--------|
-| 1 | "Splash! Where do you cool off on a hot day at sea?" | Swimming Pool |
-| 2 | "This heavy metal thing keeps the ship from floating away!" | Anchor |
-| 3 | "If everyone needs to leave the ship, they climb into these!" | Lifeboat |
-| 4 | "The sky turns orange and pink when the day says goodbye!" | Ocean Sunset |
-| 5 | "All-you-can-eat! A table full of yummy food!" | Buffet |
-| 6 | "This person wears a fancy uniform and drives the whole ship!" | Captain |
-| 7 | "A friendly sea creature that loves to jump and play beside the ship!" | Dolphin |
-| 8 | "A tall tower on the shore with a bright light to guide ships!" | Lighthouse |
-| 9 | "Look through this to see faraway islands and stars!" | Telescope |
-
-## Features
-
-- **Jigsaw puzzle pieces** with SVG-based interlocking tabs and blanks
-- **Clue overlay** — full-screen clue with a 3×3 photo answer grid
-- **Fireworks + sound** — canvas particle animation with synthesized pops, crackles, and whistles (Web Audio API, no audio files)
-- **Hints** — wrong answers show a helpful hint to guide the child
-- **Progress tracking** — solved pieces persist via localStorage
-- **Admin panel** — create new puzzles, upload/manage photos, write clues and hints
-- **Photo library** — upload photos from your device, stored in IndexedDB
+The app ships with a built-in cruise-themed puzzle featuring 9 items you'd find on a cruise ship (Swimming Pool, Anchor, Lifeboat, Ocean Sunset, Buffet, Captain, Dolphin, Lighthouse, Telescope).
 
 ## Admin Panel
 
-Click the **⚙️ Admin** button on the home screen to access the admin panel, where you can:
+Navigate to `/admin` or click the **⚙️ Admin** button on the home screen. Login requires the `ADMIN_PASSWORD` environment variable.
 
-- **Create new puzzles** with custom names, clues, hints, and photo assignments
-- **Upload photos** to the library from your device
-- **Edit existing puzzles** — update clues, hints, or swap photos
-- **Delete puzzles or photos** you no longer need
+### Puzzle Management
 
-Photo storage uses IndexedDB (browser-local), adapted from the [cjs_foto](https://github.com/chrisjschmitt/cjs_foto) project's upload/delete patterns.
+- **Create puzzles** manually — name it, add cells one at a time with photo upload, clue, hint, fun fact, and optional sound per cell
+- **Import from CSV** — bulk-create a puzzle from a CSV file
+- **Export to CSV** — select one or more puzzles and download as CSV
+- **Edit puzzles** — update any field, upload new photos, reorder cells with ↑↓ arrows
+- **Delete puzzles** — remove puzzles you no longer need
+- **Copy shareable link** — 📋 button copies the puzzle's direct play URL to clipboard
+- **Partial save** — save at any time, even with incomplete cells; come back later to finish
+- **Under construction indicator** — puzzles with fewer than 9 ready cells show 🚧 badge
+
+### Per-Puzzle Settings
+
+- **Prize image** — upload a photo revealed as the child solves pieces
+- **Celebration sound** — default WAV played on correct answer (falls back to synthesized fireworks)
+- **Unlimited cells** — add more than 9 cells; each round randomly picks 9
+
+### Per-Cell Fields
+
+| Field | Required | Shown to Player | Description |
+|-------|----------|-----------------|-------------|
+| Subject | No | No | Admin-only label shown as a blue badge on the cell header |
+| Photo | Yes (for playable cell) | Yes (in answer grid) | Uploaded image for the answer grid |
+| Photo label | No | No (labels hidden in game) | Used internally |
+| Clue | Yes | Yes | The riddle the child reads |
+| Hint | Yes | Yes (on wrong answer) | Helpful hint shown when wrong photo is chosen |
+| Fun Fact | No | Yes (after correct answer) | Displayed in a golden popup after solving |
+| Recommended Sound | No | No | Admin-only note from CSV import suggesting which sound to use |
+| Sound (WAV) | No | Yes (on correct answer) | Per-cell celebration sound; overrides puzzle default |
+
+### CSV Import/Export
+
+**Format:** `subject, clue, hint, fun fact, recommended sound`
+
+```csv
+subject, clue, hint, fun fact, recommended sound
+Swimming Pool, "Splash! Where do you cool off?", "Look for the water!", "Pools can hold 100K gallons", splash.wav
+Anchor, "This heavy thing keeps the ship still!", "Drops into the ocean", "Anchors weigh up to 10 tons", clank.wav
+```
+
+- Header row is auto-detected and skipped
+- Quoted fields with commas are handled correctly
+- Puzzle name defaults to the filename on import
+- Multi-puzzle export separates each puzzle with a comment line
+
+## Shareable Links
+
+Each puzzle can be played via a direct URL:
+
+```
+https://your-app.vercel.app/play/cruise-ship-adventure
+```
+
+The admin panel shows a **📋 Link** button per puzzle that copies the URL to clipboard. Send it to anyone — they'll land straight in that puzzle, skipping the selector.
 
 ## Development
 
@@ -73,17 +111,37 @@ npm install
 - **Vite 8** — dev server and bundler
 - **Vitest** + **Testing Library** — automated tests
 - **ESLint 9** — flat config with React hooks and refresh plugins
-- **IndexedDB** — browser-local storage for puzzles and photos
-- **Web Audio API** — synthesized fireworks sound effects
-- **SVG clip paths** — jigsaw piece shapes
+- **Vercel Blob** (private) — server-side storage for photos, sounds, and puzzle data
+- **Web Audio API** — synthesized fireworks fallback + custom WAV playback
+- **CSS Grid** — responsive 3×3 puzzle board
+
+### API Routes (`/api/`)
+
+| Route | Methods | Purpose |
+|-------|---------|---------|
+| `/api/auth` | POST | Admin login |
+| `/api/puzzles` | GET, POST, PUT, DELETE | Puzzle CRUD |
+| `/api/upload-image` | POST | Upload image/sound to Vercel Blob |
+| `/api/blob` | GET | Proxy private blob content to browser |
 
 ## Deployment
 
-Deployed to **Vercel**. Configuration is in `vercel.json`.
+Deployed to **Vercel** with private Blob storage. Configuration is in `vercel.json`.
+
+### Required Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `ADMIN_PASSWORD` | Password for the admin panel login |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob storage token (private store) |
+
+Set these in the Vercel dashboard under Project Settings → Environment Variables.
+
+### Deploy
 
 - Push to `main` triggers automatic deployment
 - Vercel auto-detects the Vite framework and runs `npm run build`
-- SPA rewrite rule ensures client-side routing works
+- SPA rewrite rule handles client-side routing (`/play/*`, `/admin`)
 
 To deploy manually via CLI:
 
