@@ -18,14 +18,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (result.statusCode === 304) {
       res.setHeader('ETag', result.blob.etag)
-      res.setHeader('Cache-Control', 'private, no-cache')
+      res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
       return res.status(304).end()
     }
 
     res.setHeader('Content-Type', result.blob.contentType)
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('ETag', result.blob.etag)
-    res.setHeader('Cache-Control', 'private, no-cache')
+    res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
     res.setHeader('Accept-Ranges', 'none')
 
     if (result.blob.size) {

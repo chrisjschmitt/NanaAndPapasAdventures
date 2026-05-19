@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { put, list, get } from '@vercel/blob'
+import { put, get } from '@vercel/blob'
 
 const PUZZLES_MANIFEST = 'adventures/puzzles.json'
 
@@ -16,9 +16,7 @@ function verifyToken(req: VercelRequest): boolean {
 
 async function getManifest(): Promise<unknown[]> {
   try {
-    const { blobs } = await list({ prefix: PUZZLES_MANIFEST })
-    if (blobs.length === 0) return []
-    const result = await get(blobs[0].url, { access: 'private' })
+    const result = await get(PUZZLES_MANIFEST, { access: 'private' })
     if (!result || result.statusCode !== 200) return []
     const text = await new Response(result.stream).text()
     return JSON.parse(text)
@@ -35,10 +33,9 @@ async function saveManifest(data: unknown[]): Promise<void> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
-
   if (req.method === 'GET') {
     const puzzles = await getManifest()
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
     return res.json(puzzles)
   }
 
